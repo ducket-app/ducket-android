@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "805856751249",
+    "project_id": "ducket-fcb51",
+    "storage_bucket": "ducket-fcb51.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:805856751249:android:d1ef163bc69d0a6e5ed930",
+        "android_client_info": {
+          "package_name": "io.ducket.android"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "805856751249-o23tq5n2odng7l56696phkfqqb88t3o6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlhcHlDfIh3TvFbNNGMvvzGNQn8BrTvf0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "805856751249-o23tq5n2odng7l56696phkfqqb88t3o6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
