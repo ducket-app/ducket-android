@@ -1,5 +1,6 @@
 package io.ducket.android.presentation.screens.accounts
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,8 +21,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import io.ducket.android.presentation.ui.theme.subtitle
+import io.ducket.android.presentation.ui.theme.caption
 
+@SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
 fun AccountsScreen(
     navController: NavHostController,
@@ -132,7 +134,7 @@ fun AccountsSelectAll() {
     val borderColor = if (selected.value) {
         MaterialTheme.colors.secondary
     } else {
-        MaterialTheme.colors.subtitle
+        MaterialTheme.colors.caption
     }
 
     Box(
@@ -163,7 +165,7 @@ fun AccountsSummaryItem() {
     val borderColor = if (selected.value) {
         MaterialTheme.colors.secondary
     } else {
-        MaterialTheme.colors.subtitle
+        MaterialTheme.colors.caption
     }
 
     Box(
@@ -198,7 +200,7 @@ fun AccountsSummaryItem() {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.body2,
-                    color = MaterialTheme.colors.subtitle
+                    color = MaterialTheme.colors.caption
                 )
 
                 Text(
@@ -243,7 +245,7 @@ fun SummaryHeader() {
         }
         Divider(
             thickness = 1.dp,
-            color = MaterialTheme.colors.subtitle
+            color = MaterialTheme.colors.caption
         )
     }
 }

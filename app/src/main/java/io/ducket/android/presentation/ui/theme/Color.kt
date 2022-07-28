@@ -20,10 +20,8 @@ val Teal400 = Color(0xFF1DE9B6)
 val Teal600 = Color(0xFF0097A7)
 val Teal900 = Color(0xFF006064)
 
-val Blue100 = Color(0xFFBBDEFB)
-val Blue200 = Color(0xFF90CAF9)
-val Blue600 = Color(0xFF1E88E5)
-val Blue900 = Color(0xFF0D47A1)
+val Green600 = Color(0xFF3FCA54)
+val Green900 = Color(0xFF388E3C)
 
 val DeepPurple100 = Color(0xFFD1C4E9)
 val DeepPurple200 = Color(0xFFB39DDB)

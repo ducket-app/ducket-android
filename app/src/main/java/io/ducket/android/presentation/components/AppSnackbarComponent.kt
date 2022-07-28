@@ -5,13 +5,14 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun AppSnackbar(
     modifier: Modifier = Modifier,
     snackbarHostState: SnackbarHostState,
-    onDismiss: () -> Unit = { }
+    onDismiss: () -> Unit = {}
 ) {
     SnackbarHost(
         modifier = modifier
@@ -24,16 +25,18 @@ fun AppSnackbar(
                 content = {
                     Text(
                         text = data.message,
-                        style = MaterialTheme.typography.body2
+                        style = MaterialTheme.typography.body2,
+                        fontWeight = FontWeight.Medium,
                     )
                 },
                 action = {
-                    data.actionLabel?.let { actionLabel ->
+                    data.actionLabel?.let {
                         TextButton(onClick = onDismiss) {
                             Text(
-                                text = actionLabel,
-                                color= MaterialTheme.colors.surface,
-                                style = MaterialTheme.typography.body2
+                                text = it,
+                                color= MaterialTheme.colors.secondary,
+                                style = MaterialTheme.typography.body2,
+                                fontWeight = FontWeight.Medium,
                             )
                         }
                     }

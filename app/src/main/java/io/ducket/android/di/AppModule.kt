@@ -1,6 +1,5 @@
 package io.ducket.android.di
 
-import android.app.Application
 import android.content.Context
 import androidx.room.Room
 import dagger.Module
@@ -23,7 +22,6 @@ import javax.inject.Singleton
 import okhttp3.OkHttpClient
 
 import okhttp3.Interceptor
-import okhttp3.Request
 
 
 @Module
@@ -59,7 +57,7 @@ object AppModule {
     ): LocalDataSource = Room.databaseBuilder(
         context,
         LocalDataSource::class.java,
-        "ducket_db",
+        "main_db",
     ).build()
 
     @Provides

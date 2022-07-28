@@ -20,23 +20,23 @@ class HomeViewModel @Inject constructor(
     val screenState: LiveData<HomeScreenState> get() = _screenState
 
     init {
-        viewModelScope.launch {
-            getAccountsInteractor().collect {
-                when (it) {
-                    is ResourceState.Loading -> {
-                        _screenState.value = HomeScreenState.Loading
-                    }
-                    is ResourceState.Success -> {
-                        _screenState.value = HomeScreenState.Success(it.data)
-                    }
-                    is ResourceState.ConnectivityError,
-                    is ResourceState.AuthorizationError,
-                    is ResourceState.Error -> {
-                        _screenState.value = HomeScreenState.Error(it.msg)
-                        // _screenEvent.emit(ScreenEvent.ShowMessage(it.msg))
-                    }
-                }
-            }
-        }
+//        viewModelScope.launch {
+//            getAccountsInteractor().collect {
+//                when (it) {
+//                    is ResourceState.Loading -> {
+//                        _screenState.value = HomeScreenState.Loading
+//                    }
+//                    is ResourceState.Success -> {
+//                        _screenState.value = HomeScreenState.Success(it.data)
+//                    }
+//                    is ResourceState.ConnectivityError,
+//                    is ResourceState.AuthorizationError,
+//                    is ResourceState.Error -> {
+//                        _screenState.value = HomeScreenState.Error(it.msg)
+//                        // _screenEvent.emit(ScreenEvent.ShowMessage(it.msg))
+//                    }
+//                }
+//            }
+//        }
     }
 }

@@ -1,5 +1,6 @@
 package io.ducket.android.presentation.screens.menu
 
+import android.annotation.SuppressLint
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.*
@@ -25,9 +26,35 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.ramcosta.composedestinations.annotation.Destination
 import io.ducket.android.R
+import io.ducket.android.presentation.navigation.MenuNavGraph
 import io.ducket.android.presentation.ui.theme.*
 
+@MenuNavGraph(start = true)
+@Destination
+@Composable
+fun MenuScreen2() {
+
+    Column {
+        io.ducket.android.presentation.components.AppBar(
+            title = stringResource(id = R.string.menu_tab_title),
+            elevation = 0.dp,
+        )
+
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colors.surface),
+        ) {
+            Text(text = "Menu screen")
+        }
+    }
+}
+
+
+@SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
 fun MenuScreen(
     // viewModel: SignInViewModel = hiltViewModel()

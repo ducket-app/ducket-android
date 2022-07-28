@@ -41,7 +41,6 @@ class UserRepository @Inject constructor(
     @ExperimentalCoroutinesApi
     override fun authUser(payload: UserAuthDto): Flow<ResourceState<UserDetails?>> = networkBoundResourceChannel(
         remoteCall = {
-            delay(500)
             api.authUser(payload)
         },
         saveRemoteResult = { res ->

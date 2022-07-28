@@ -1,5 +1,6 @@
 package io.ducket.android.presentation.screens.records
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -26,7 +27,28 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
+import com.ramcosta.composedestinations.annotation.Destination
+import com.ramcosta.composedestinations.navigation.DestinationsNavigator
+import io.ducket.android.R
+import io.ducket.android.presentation.components.AppBar
+import io.ducket.android.presentation.navigation.RecordsNavGraph
+import io.ducket.android.presentation.screens.destinations.RecordDetailsDestination
 
+@RecordsNavGraph(start = true)
+@Destination
+@Composable
+fun RecordsScreen2(
+    navigator: DestinationsNavigator
+) {
+    RecordsScreenContent(
+        onRecordDetailsClick = {
+            navigator.navigate(RecordDetailsDestination)
+        }
+    )
+}
+
+@SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
 fun RecordsScreen(
     navController: NavHostController,
@@ -44,38 +66,34 @@ fun RecordsScreen(
             )
         },
         content = {
-            RecordsScreenContent(
-                checkBoxState = checkBoxState,
-                onCheckBoxChange = {
-                    checkBoxState = it
-                },
-                onRecordClick = onRecordClick
-            )
+            RecordsScreenContent()
         }
     )
 }
 
 @Composable
 fun RecordsScreenContent(
-    checkBoxState: Boolean,
-    onCheckBoxChange: (Boolean) -> Unit,
-    onRecordClick: () -> Unit,
+    onRecordDetailsClick: () -> Unit = {},
 ) {
+    Column {
+        AppBar(
+            title = stringResource(id = R.string.records_tab_title),
+            elevation = 0.dp,
+        )
 
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.align(Alignment.Center)) {
-            Checkbox(checked = checkBoxState, onCheckedChange = onCheckBoxChange)
-
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colors.surface),
+        ) {
             Text(
-                text = "Records screen",
-                modifier = Modifier
-                    .clickable(enabled = true) {
-                        onRecordClick()
-                    },
+                modifier = Modifier.clickable {
+                    onRecordDetailsClick()
+                },
+                text = "Records screen"
             )
         }
-
     }
 }
 

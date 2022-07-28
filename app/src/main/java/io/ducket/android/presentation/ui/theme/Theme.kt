@@ -12,10 +12,10 @@ import androidx.compose.ui.graphics.Color
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
 private val DarkColorPalette = darkColors(
-    primary = Blue100,
-    primaryVariant = Blue200,
-    secondary = Orange100,
-    secondaryVariant = Orange200,
+    primary = Gray100,
+    primaryVariant = Gray100,
+    secondary = DeepPurple700,
+    secondaryVariant = DeepPurple700,
 
     onPrimary = Black,
     onSecondary = Black,
@@ -24,12 +24,12 @@ private val DarkColorPalette = darkColors(
 )
 
 private val LightColorPalette = lightColors(
-    primary = Blue600,
-    primaryVariant = Blue900,
-    secondary = Orange400,
-    secondaryVariant = Orange700,
+    primary = Gray900,
+    primaryVariant = Gray900,
+    secondary = DeepPurple700,
+    secondaryVariant = DeepPurple700,
 
-    background = Gray100,
+    background = White,
     surface = White,
     onPrimary = White,
     onSecondary = White,
@@ -37,9 +37,9 @@ private val LightColorPalette = lightColors(
     onSurface = Black,
 )
 
-val Colors.subtitle: Color
-    @Composable
-    get() = MaterialTheme.colors.onSurface.copy(alpha = 0.2f)
+val Colors.caption: Color @Composable get() = MaterialTheme.colors.onSurface.copy(alpha = 0.2f)
+val Colors.success: Color @Composable get() = Green600
+val Colors.failure: Color @Composable get() = Red
 
 @Composable
 fun DucketAndroidTheme(
@@ -51,8 +51,12 @@ fun DucketAndroidTheme(
         val systemUiController = rememberSystemUiController()
 
         SideEffect {
+//            systemUiController.setSystemBarsColor(
+//                color = if (darkTheme) Color.Black else Color.White,
+//            )
             systemUiController.setSystemBarsColor(
-                color = if (darkTheme) Color.Black else Color.White
+                color = Color.Transparent,
+                darkIcons = !darkTheme
             )
         }
     }

@@ -1,7 +1,7 @@
 package io.ducket.android.presentation.screens.currencies
 
-import android.os.Bundle
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,9 +11,6 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.saveable.Saver
-import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -32,139 +29,107 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.ramcosta.composedestinations.annotation.Destination
+import com.ramcosta.composedestinations.result.ResultBackNavigator
 import io.ducket.android.R
 import io.ducket.android.data.local.entity.Currency
+import io.ducket.android.presentation.navigation.AppSnackbarManager
+import io.ducket.android.presentation.navigation.AuthNavGraph
+import io.ducket.android.presentation.navigation.FullScreenDialogTransitions
+import io.ducket.android.presentation.navigation.TabsNavGraph
 import io.ducket.android.presentation.ui.theme.DucketAndroidTheme
 import io.ducket.android.presentation.ui.theme.SpaceMedium
 import io.ducket.android.presentation.ui.theme.SpaceSmall
 
-@ExperimentalComposeUiApi
-@ExperimentalMaterialApi
+
+@AuthNavGraph
+@Destination(
+    navArgsDelegate = CurrencySelectionScreenArgs::class,
+    style = FullScreenDialogTransitions::class,
+)
 @Composable
 fun CurrencySelectionScreen(
-    viewModel: CurrencySelectionViewModel,
-    scaffoldState: ScaffoldState,
-    navigateBack: (isoCode: String) -> Unit,
+    viewModel: CurrencySelectionViewModel = hiltViewModel(),
+    snackbarManager: AppSnackbarManager,
+    resultNavigator: ResultBackNavigator<String>
 ) {
-    val screenState = rememberCurrencySelectionScreenState()
-    val uiState = viewModel.screenState.observeAsState().value
-    val selectedCurrency by viewModel.selectedCurrency
+    val uiState by viewModel.stateFlow.collectAsState()
+    var showSearchBar by rememberSaveable { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            CurrencySelectionAppBar(
-                showSearchAppBar = screenState.showSearch,
-                searchText = screenState.searchText,
-                onBackClick = {
-                    navigateBack(selectedCurrency)
-                },
-                onSearchTextChange = {
-                    // viewModel.searchTextState.value = it
-                    screenState.onSearch(it)
-                    // searchText = it
-
-                    viewModel.searchCurrencies(it)
-                },
-                onSearchClick = {
-                    viewModel.searchCurrencies(it)
-                },
-                onCloseSearchClick = {
-                    screenState.onCloseSearch()
-                    // showSearch = false
-                    // viewModel.searchAppBarVisibilityState.value = false
-                },
-                onOpenSearchClick = {
-                    screenState.onOpenSearch()
-                    // showSearch = true
-                    // viewModel.searchAppBarVisibilityState.value = true
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect {
+            when (it) {
+                is CurrencySelectionUiEvent.ShowMessage -> {
+                    snackbarManager.showMessage(it.text)
                 }
-            )
-        },
-        content = {
-            when (uiState) {
-                is CurrencySelectionViewModel.UiState.Loaded -> {
-                    CurrencySelectionContent(
-                        currencyList = uiState.currencyList,
-                        selectedCurrency = selectedCurrency,
-                        onCurrencySelect = {
-                            viewModel.selectedCurrency.value = it
-
-                            navigateBack(it)
-                        },
-                    )
+                is CurrencySelectionUiEvent.NavigateBackWithResult -> {
+                    resultNavigator.navigateBack(it.currency)
                 }
-                is CurrencySelectionViewModel.UiState.Loading -> {
-                    CurrencySelectionLoadingContent()
-                }
-                is CurrencySelectionViewModel.UiState.Error -> {
-                    LaunchedEffect(scaffoldState.snackbarHostState) {
-                        scaffoldState.snackbarHostState.showSnackbar(uiState.msg)
-                    }
+                is CurrencySelectionUiEvent.NavigateBack -> {
+                    resultNavigator.navigateBack()
                 }
             }
         }
+    }
+
+    CurrencySelectionContent(
+        state = uiState,
+        showSearchBar = showSearchBar,
+        onCurrencySelect = { viewModel.onEvent(CurrencySelectionViewModel.Event.OnSelect(it)) },
+        onSearch = { viewModel.onEvent(CurrencySelectionViewModel.Event.OnSearch(it)) },
+        onBackClick = { viewModel.onEvent(CurrencySelectionViewModel.Event.OnBack) },
+        onCloseSearchClick = { showSearchBar = false },
+        onOpenSearchClick = { showSearchBar = true }
     )
 }
 
-@Composable
-fun rememberCurrencySelectionScreenState(
-    showSearch: Boolean = false,
-    searchText: String = "",
-) = rememberSaveable(saver = CurrencySelectionScreenState.Saver) {
-    CurrencySelectionScreenState(
-        showSearch = showSearch,
-        searchText = searchText,
-    )
-}
-
-class CurrencySelectionScreenState(
-    showSearch: Boolean,
-    searchText: String,
-) {
-    private var _showSearch by mutableStateOf(showSearch)
-    private var _searchText by mutableStateOf(searchText)
-
-    var showSearch: Boolean
-        get() = _showSearch
-        internal set(value) { _showSearch = value }
-
-    var searchText: String
-        get() = _searchText
-        internal set(value) { _searchText = value }
-
-    fun onCloseSearch() {
-        showSearch = false
-    }
-
-    fun onOpenSearch() {
-        showSearch = true
-    }
-
-    fun onSearch(query: String) {
-        searchText = query
-    }
-
-    companion object {
-        val Saver = listSaver<CurrencySelectionScreenState, Any>(
-            save = {
-                listOf(it.showSearch, it.searchText)
-            },
-            restore = {
-                CurrencySelectionScreenState(
-                    showSearch = it[0] as Boolean,
-                    searchText = it[1] as String,
-                )
-            }
-        )
-    }
-}
-
-@ExperimentalMaterialApi
 @Composable
 fun CurrencySelectionContent(
+    state: CurrencySelectionUiState,
+    showSearchBar: Boolean,
+    onCurrencySelect: (Long) -> Unit,
+    onSearch: (String) -> Unit,
+    onBackClick: () -> Unit,
+    onCloseSearchClick: () -> Unit,
+    onOpenSearchClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colors.surface)
+    ) {
+        if (showSearchBar) {
+            CurrencySelectionSearchAppBar(
+                searchText = state.searchQuery,
+                onSearch = onSearch,
+                onSearchClose = onCloseSearchClick,
+            )
+        } else {
+            CurrencySelectionAppBar(
+                onBackClick = onBackClick,
+                onOpenSearch = onOpenSearchClick,
+            )
+        }
+
+        if (state.isLoading) {
+            CurrencySelectionLoading()
+        } else {
+            CurrencySelectionList(
+                currencyList = state.currencyList,
+                selectedCurrency = state.selectedCurrency,
+                onCurrencySelect = onCurrencySelect,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterialApi::class)
+@Composable
+fun CurrencySelectionList(
     currencyList: List<Currency>,
-    selectedCurrency: String?,
-    onCurrencySelect: (String) -> Unit,
+    selectedCurrency: String,
+    onCurrencySelect: (Long) -> Unit,
 ) {
     LazyColumn {
         items(
@@ -175,14 +140,16 @@ fun CurrencySelectionContent(
                 currencyIsoCode = currency.isoCode,
                 currencyName = currency.name,
                 selected = currency.isoCode == selectedCurrency,
-                onCurrencySelect = onCurrencySelect
+                onClick = {
+                    onCurrencySelect(currency.id)
+                }
             )
         }
     }
 }
 
 @Composable
-fun CurrencySelectionLoadingContent() {
+fun CurrencySelectionLoading() {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -199,16 +166,14 @@ fun CurrencyItem(
     currencyIsoCode: String,
     currencyName: String,
     selected: Boolean,
-    onCurrencySelect: (String) -> Unit,
+    onClick: () -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colors.surface,
         shape = RectangleShape,
         elevation = 1.dp,
-        onClick = {
-            onCurrencySelect(currencyIsoCode)
-        }
+        onClick = onClick
     ) {
         Row(
             modifier = Modifier
@@ -244,50 +209,25 @@ fun CurrencyItem(
                 Icon(
                     imageVector = Icons.Default.Check,
                     contentDescription = Icons.Default.Check.name,
-                    tint = MaterialTheme.colors.primary,
+                    tint = MaterialTheme.colors.secondary,
                 )
             }
         }
     }
 }
 
-@ExperimentalComposeUiApi
 @Composable
 fun CurrencySelectionAppBar(
-    showSearchAppBar: Boolean,
-    searchText: String,
     onBackClick: () -> Unit,
-    onSearchTextChange: (String) -> Unit,
-    onSearchClick: (String) -> Unit,
-    onCloseSearchClick: () -> Unit,
-    onOpenSearchClick: () -> Unit,
-) {
-    if (showSearchAppBar) {
-        SearchCurrencySelectionAppBar(
-            text = searchText,
-            onTextChange = onSearchTextChange,
-            onBackClick = onCloseSearchClick,
-            onSearchClick = onSearchClick,
-        )
-    } else {
-        DefaultCurrencySelectionAppBar(
-            onBackClick = onBackClick,
-            onSearchClick = onOpenSearchClick,
-        )
-    }
-}
-
-@Composable
-fun DefaultCurrencySelectionAppBar(
-    onBackClick: () -> Unit,
-    onSearchClick: () -> Unit,
+    onOpenSearch: () -> Unit,
 ) {
     TopAppBar(
+        elevation = 2.dp,
         title = {
-            Text(text = "Select currency")
+            Text(text = stringResource(id = R.string.select_currency_title))
         },
         actions = {
-            IconButton(onClick = onSearchClick) {
+            IconButton(onClick = onOpenSearch) {
                 Icon(
                     imageVector = Icons.Filled.Search,
                     tint = MaterialTheme.colors.onSurface,
@@ -305,17 +245,15 @@ fun DefaultCurrencySelectionAppBar(
             }
         },
         backgroundColor = MaterialTheme.colors.surface,
-        elevation = AppBarDefaults.TopAppBarElevation,
     )
 }
 
-@ExperimentalComposeUiApi
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun SearchCurrencySelectionAppBar(
-    text: String,
-    onTextChange: (String) -> Unit,
-    onBackClick: () -> Unit,
-    onSearchClick: (String) -> Unit,
+fun CurrencySelectionSearchAppBar(
+    searchText: String,
+    onSearch: (String) -> Unit,
+    onSearchClose: () -> Unit,
 ) {
     val searchFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -326,7 +264,8 @@ fun SearchCurrencySelectionAppBar(
     }
 
     BackHandler(enabled = true) {
-        onBackClick()
+        onSearchClose()
+        onSearch("")
     }
 
     Surface(
@@ -345,12 +284,12 @@ fun SearchCurrencySelectionAppBar(
                         keyboardController?.show()
                     }
                 },
-            value = text,
-            onValueChange = { onTextChange(it) },
+            value = searchText,
+            onValueChange = onSearch,
             placeholder = {
                 Text(
                     modifier = Modifier.alpha(ContentAlpha.disabled),
-                    text = stringResource(id = R.string.search_placeholder),
+                    text = stringResource(id = R.string.search_hint),
                     color = MaterialTheme.colors.onSurface,
                 )
             },
@@ -362,8 +301,8 @@ fun SearchCurrencySelectionAppBar(
             leadingIcon = {
                 IconButton(
                     onClick = {
-                        onBackClick()
-                        onTextChange("")
+                        onSearchClose()
+                        onSearch("")
                     }
                 ) {
                     Icon(
@@ -374,16 +313,16 @@ fun SearchCurrencySelectionAppBar(
                 }
             },
             trailingIcon = {
-                if (text.isNotEmpty()) {
+                if (searchText.isNotEmpty()) {
                     IconButton(
                         onClick = {
-                            onTextChange("")
+                            onSearch("")
                         }
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Clear,
-                            contentDescription = Icons.Filled.Clear.name,
                             tint = MaterialTheme.colors.onSurface,
+                            contentDescription = null,
                         )
                     }
                 }
@@ -393,7 +332,7 @@ fun SearchCurrencySelectionAppBar(
             ),
             keyboardActions = KeyboardActions(
                 onSearch = {
-                    onSearchClick(text)
+                    onSearch(searchText)
                 },
             ),
             colors = TextFieldDefaults.textFieldColors(
@@ -407,16 +346,17 @@ fun SearchCurrencySelectionAppBar(
     }
 }
 
-@ExperimentalMaterialApi
+
+@OptIn(ExperimentalMaterialApi::class)
 @Preview
 @Composable
 private fun CurrencyItemPreview() {
     DucketAndroidTheme {
         CurrencyItem(
-            currencyIsoCode = "Preview",
-            currencyName = "Preview",
+            currencyIsoCode = "Title",
+            currencyName = "Subtitle",
             selected = true,
-            onCurrencySelect = {}
+            onClick = {}
         )
     }
 }

@@ -1,6 +1,5 @@
 package io.ducket.android.presentation.navigation
 
-import android.net.Uri
 import androidx.navigation.NamedNavArgument
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
@@ -28,8 +27,8 @@ sealed class Destination(val route: String) {
 
     open fun navArgs(): List<NamedNavArgument> = emptyList()
 
-    object Launch : Destination(
-        route = "${Graph.Host.route}/launch"
+    object Splash : Destination(
+        route = "${Graph.Host.route}/splash"
     )
 
     object Welcome : Destination(
@@ -59,7 +58,6 @@ sealed class Destination(val route: String) {
     object CurrencySelection : Destination(
         route = "currencySelection?currencyIsoCode={${ARG_CURRENCY_ISO_CODE}}"
     ) {
-
         override fun navArgs(): List<NamedNavArgument> = listOf(
             navArgument(ARG_CURRENCY_ISO_CODE) {
                 type = NavType.StringType
@@ -87,7 +85,6 @@ sealed class Destination(val route: String) {
     object UserDetails : Destination(
         route = "${TabGraph.Records.route}/user/{${ARG_USER_ID}}"
     ) {
-
         override fun navArgs(): List<NamedNavArgument> = listOf(
             navArgument(ARG_USER_ID) { type = NavType.IntType },
         )

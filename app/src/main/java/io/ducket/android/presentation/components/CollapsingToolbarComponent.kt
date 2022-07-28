@@ -1,22 +1,17 @@
 package io.ducket.android.presentation.components
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.R
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Velocity
 import androidx.constraintlayout.compose.ConstraintSet
@@ -27,11 +22,11 @@ import androidx.constraintlayout.compose.MotionLayout
 @ExperimentalMaterialApi
 @Composable
 fun CollapsableToolbar() {
-    val scrollState = rememberSwipeableState(initialValue = ScrollState.EXPANDED)
-    val scrollProgress = if (scrollState.progress.to == ScrollState.COLLAPSED) {
-        scrollState.progress.fraction
+    val expandanceState = rememberSwipeableState(initialValue = ExpandanceState.EXPANDED)
+    val scrollProgress = if (expandanceState.progress.to == ExpandanceState.COLLAPSED) {
+        expandanceState.progress.fraction
     } else {
-        1f - scrollState.progress.fraction
+        1f - expandanceState.progress.fraction
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -45,7 +40,7 @@ fun CollapsableToolbar() {
                 ): Offset {
                     val delta = available.y
                     return if (delta < 0) {
-                        scrollState.performDrag(delta).toOffset()
+                        expandanceState.performDrag(delta).toOffset()
                     } else {
                         Offset.Zero
                     }
@@ -57,14 +52,14 @@ fun CollapsableToolbar() {
                     source: NestedScrollSource
                 ): Offset {
                     val delta = available.y
-                    return scrollState.performDrag(delta).toOffset()
+                    return expandanceState.performDrag(delta).toOffset()
                 }
 
                 override suspend fun onPostFling(
                     consumed: Velocity,
                     available: Velocity
                 ): Velocity {
-                    scrollState.performFling(velocity = available.y)
+                    expandanceState.performFling(velocity = available.y)
                     return super.onPostFling(consumed, available)
                 }
 
@@ -75,13 +70,13 @@ fun CollapsableToolbar() {
             modifier = Modifier
                 .fillMaxSize()
                 .swipeable(
-                    state = scrollState,
+                    state = expandanceState,
                     thresholds = { _, _ -> FractionalThreshold(0.5f) },
                     orientation = Orientation.Vertical,
                     anchors = mapOf(
                         // Maps anchor points (in px) to states
-                        0f to ScrollState.COLLAPSED,
-                        heightInPx to ScrollState.EXPANDED,
+                        0f to ExpandanceState.COLLAPSED,
+                        heightInPx to ExpandanceState.EXPANDED,
                     )
                 )
                 .nestedScroll(connection)
@@ -97,7 +92,7 @@ fun CollapsableToolbar() {
     }
 }
 
-enum class ScrollState {
+enum class ExpandanceState {
     EXPANDED,
     COLLAPSED
 }

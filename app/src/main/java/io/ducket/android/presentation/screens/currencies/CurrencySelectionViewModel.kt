@@ -1,15 +1,15 @@
 package io.ducket.android.presentation.screens.currencies
 
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.ducket.android.common.ResourceState
-import io.ducket.android.data.local.entity.Currency
 import io.ducket.android.domain.interactors.GetCurrenciesInteractor
 import io.ducket.android.domain.interactors.SearchCurrenciesInteractor
-import io.ducket.android.presentation.navigation.NavArgKey
-import kotlinx.coroutines.flow.collect
+import io.ducket.android.presentation.StateViewModel
+import io.ducket.android.presentation.screens.navArgs
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -19,60 +19,86 @@ class CurrencySelectionViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
     private val getCurrenciesInteractor: GetCurrenciesInteractor,
     private val searchCurrenciesInteractor: SearchCurrenciesInteractor,
-) : ViewModel() {
+) : StateViewModel<CurrencySelectionUiState>(CurrencySelectionUiState()) {
 
-    private val _screenState = MutableLiveData<UiState>()
-    val screenState: LiveData<UiState> get() = _screenState
-
-    val selectedCurrency: MutableState<String> = mutableStateOf(savedStateHandle.get(NavArgKey.ARG_CURRENCY_ISO_CODE) ?: "")
+    private val _uiEvent = Channel<CurrencySelectionUiEvent>()
+    val uiEvent: Flow<CurrencySelectionUiEvent> = _uiEvent.receiveAsFlow()
 
     init {
+        updateState {
+            copy(selectedCurrency = savedStateHandle.navArgs<CurrencySelectionScreenArgs>().currency)
+        }
+
         getCurrencies()
     }
 
-    fun getCurrencies() {
+    fun onEvent(event: Event) {
+        when (event) {
+            is Event.OnSearch -> {
+                updateState {
+                    copy(searchQuery = event.query)
+                }
+                searchCurrencies(event.query)
+            }
+            is Event.OnSelect -> {
+                viewModelScope.launch {
+                    val currency = state.currencyList.firstOrNull { it.id == event.id }!!.isoCode
+                    _uiEvent.send(CurrencySelectionUiEvent.NavigateBackWithResult(currency))
+                }
+            }
+            is Event.OnBack -> {
+                viewModelScope.launch {
+                    _uiEvent.send(CurrencySelectionUiEvent.NavigateBack)
+                }
+            }
+        }
+    }
+
+    private fun getCurrencies() {
         viewModelScope.launch {
-            getCurrenciesInteractor().collect {
+            getCurrenciesInteractor.invoke().collect {
                 when (it) {
                     is ResourceState.Loading -> {
-                        _screenState.value = UiState.Loading
+                        updateState { copy(isLoading = true) }
                     }
                     is ResourceState.Success -> {
-                        _screenState.value = UiState.Loaded(it.data)
+                        updateState { copy(isLoading = false, currencyList = it.data) }
                     }
                     is ResourceState.ConnectivityError,
                     is ResourceState.AuthorizationError,
                     is ResourceState.Error -> {
-                        _screenState.value = UiState.Error(it.msg)
+                        updateState { copy(isLoading = false) }
+                        _uiEvent.send(CurrencySelectionUiEvent.ShowMessage(it.msg))
                     }
                 }
             }
         }
     }
 
-    fun searchCurrencies(query: String) {
+    private fun searchCurrencies(query: String) {
         viewModelScope.launch {
             searchCurrenciesInteractor(query).collect {
                 when (it) {
                     is ResourceState.Loading -> {
-                        _screenState.value = UiState.Loading
+                        updateState { copy(isLoading = true) }
                     }
                     is ResourceState.Success -> {
-                        _screenState.value = UiState.Loaded(it.data)
+                        updateState { copy(isLoading = false, currencyList = it.data) }
                     }
                     is ResourceState.ConnectivityError,
                     is ResourceState.AuthorizationError,
                     is ResourceState.Error -> {
-                        _screenState.value = UiState.Error(it.msg)
+                        updateState { copy(isLoading = false) }
+                        _uiEvent.send(CurrencySelectionUiEvent.ShowMessage(it.msg))
                     }
                 }
             }
         }
     }
 
-    sealed class UiState {
-        object Loading : UiState()
-        data class Loaded(val currencyList: List<Currency>) : UiState()
-        data class Error(val msg: String) : UiState()
+    sealed class Event {
+        data class OnSearch(val query: String) : Event()
+        data class OnSelect(val id: Long) : Event()
+        object OnBack : Event()
     }
 }

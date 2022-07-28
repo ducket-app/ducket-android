@@ -1,5 +1,6 @@
 package io.ducket.android.presentation.screens.home
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.*
@@ -15,22 +16,58 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.rememberPagerState
+import com.ramcosta.composedestinations.annotation.Destination
+import com.ramcosta.composedestinations.navigation.DestinationsNavigator
+import io.ducket.android.R
 import io.ducket.android.data.local.entity.detailed.AccountDetails
+import io.ducket.android.presentation.components.AppBar
+import io.ducket.android.presentation.navigation.AppSnackbarManager
+import io.ducket.android.presentation.navigation.BottomBarDestination
+import io.ducket.android.presentation.navigation.HomeNavGraph
+import io.ducket.android.presentation.navigation.navigateTab
+import io.ducket.android.presentation.screens.NavGraphs
+import io.ducket.android.presentation.screens.destinations.HomeScreen2Destination
+import io.ducket.android.presentation.screens.destinations.RecordDetailsDestination
 import io.ducket.android.presentation.screens.records.CardCaption
 import io.ducket.android.presentation.screens.records.CardIcon
 import io.ducket.android.presentation.screens.records.CardTitle
 import io.ducket.android.presentation.screens.records.Record
-import io.ducket.android.presentation.ui.theme.subtitle
+import io.ducket.android.presentation.ui.theme.SpaceSmall
+import io.ducket.android.presentation.ui.theme.caption
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
 
-@ExperimentalPagerApi
+
+@HomeNavGraph(start = true)
+@Destination
+@Composable
+fun HomeScreen2(
+    viewModel: HomeViewModel = hiltViewModel(),
+    appSnackbarManager: AppSnackbarManager,
+    navController: NavController
+) {
+    val uiState = viewModel.screenState.observeAsState().value
+
+    HomeScreenContent(
+        onRecordDetailsClick = {
+//            navigator.navigate(RecordDetailsDestination) {
+//                // popUpTo(NavGraphs.tabs.route)
+//            }
+            navController.navigateTab(BottomBarDestination.Records.navGraph)
+        }
+    )
+}
+
+@SuppressLint("UnusedMaterialScaffoldPaddingParameter")
 @Composable
 fun HomeScreen(
     scaffoldState: ScaffoldState,
@@ -38,32 +75,7 @@ fun HomeScreen(
 ) {
     val uiState = viewModel.screenState.observeAsState().value
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Home") },
-                backgroundColor = MaterialTheme.colors.surface,
-                elevation = 4.dp,
-            )
-        },
-        content = {
-            when(uiState) {
-                is HomeScreenState.Success -> {
-                    HomeScreenContent(
-                        accounts = uiState.accounts
-                    )
-                }
-                is HomeScreenState.Loading -> {
-                    HomeScreenLoading()
-                }
-                is HomeScreenState.Error -> {
-                    LaunchedEffect(scaffoldState.snackbarHostState) {
-                        scaffoldState.snackbarHostState.showSnackbar(uiState.msg)
-                    }
-                }
-            }
-        }
-    )
+    HomeScreenContent()
 }
 
 @Composable
@@ -78,26 +90,29 @@ fun HomeScreenLoading() {
     }
 }
 
-@ExperimentalPagerApi
 @Composable
 fun HomeScreenContent(
-    accounts: List<AccountDetails>,
+    onRecordDetailsClick: () -> Unit = {},
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        DashboardCardHeader(
-            title = "Accounts balance",
-            action = "View all",
+    Column {
+        AppBar(
+            title = stringResource(id = R.string.home_tab_title),
+            elevation = 0.dp,
         )
-        Spacer(modifier = Modifier.height(16.dp))
-        AccountsBalanceCard(
-            accounts = accounts
-        )
-        // AccountsSummary()
-        // (text = "Home screen", modifier = Modifier.align(Alignment.Center))
+
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colors.surface),
+        ) {
+            Text(
+                modifier = Modifier.clickable {
+                    onRecordDetailsClick()
+                },
+                text = "Home screen"
+            )
+        }
     }
 }
 
@@ -131,9 +146,7 @@ fun DashboardCardHeader(
 fun AccountsSummaryOptionRow() {
     val options = listOf("All", "Millennium", "ING", "Cash", "Belarusbank", "Cash EUR", "PKO Bank")
 
-    val pagerState = rememberPagerState(
-        initialPage = 0,
-    )
+    val pagerState = rememberPagerState()
 
     val selectedOptionIdx = pagerState.currentPage
     val rowState = rememberLazyListState()
@@ -225,7 +238,7 @@ fun AccountSummaryRecords() {
                 text = "Records",
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.body2,
-                color = MaterialTheme.colors.subtitle,
+                color = MaterialTheme.colors.caption,
             )
             Text(
                 text = "View all",
@@ -263,7 +276,7 @@ fun AccountsVisibilityColumn() {
                 text = "Accounts (4)",
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.body2,
-                color = MaterialTheme.colors.subtitle,
+                color = MaterialTheme.colors.caption,
             )
             Text(
                 text = "Toggle visiblity",
@@ -302,7 +315,7 @@ fun BalanceFilter(
 
     val actionColor = if (selected)
         MaterialTheme.colors.secondary
-    else MaterialTheme.colors.subtitle
+    else MaterialTheme.colors.caption
 
     Box(
         modifier = Modifier
@@ -342,7 +355,7 @@ fun BalanceInstantFilter(
 
     val actionColor = if (selected)
         MaterialTheme.colors.secondary
-    else MaterialTheme.colors.subtitle
+    else MaterialTheme.colors.caption
 
     Row(
         modifier = Modifier
@@ -425,7 +438,7 @@ fun AccountPreview(
             Icon(
                 imageVector = Icons.Filled.Visibility,
                 contentDescription = "desc",
-                tint = MaterialTheme.colors.subtitle,
+                tint = MaterialTheme.colors.caption,
             )
         }
     }
@@ -522,7 +535,7 @@ fun RoundedIcon(
         Icon(
             imageVector = icon,
             contentDescription = icon.name,
-            tint = MaterialTheme.colors.subtitle,
+            tint = MaterialTheme.colors.caption,
         )
     }
 }

@@ -5,60 +5,151 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.ducket.android.common.ResourceState
 import io.ducket.android.data.remote.dto.UserAuthDto
 import io.ducket.android.domain.interactors.AuthUserInteractor
+import io.ducket.android.presentation.StateViewModel
+import io.ducket.android.presentation.components.validator.*
+import io.ducket.android.presentation.screens.InputFieldState
+import io.ducket.android.presentation.screens.ProtectedInputFieldState
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+sealed class SignInUiEvent {
+    class ShowMessage(val text: String) : SignInUiEvent()
+    object NavigateToSignUp : SignInUiEvent()
+    object NavigateToHome : SignInUiEvent()
+    object NavigateBack : SignInUiEvent()
+}
+
+data class SignInUiState(
+    val isLoading: Boolean = false,
+    val isFormValid: Boolean = false,
+    val email: InputFieldState = InputFieldState(),
+    val password: ProtectedInputFieldState = ProtectedInputFieldState(),
+)
+
 @HiltViewModel
 class SignInViewModel @Inject constructor(
     private val authUserInteractor: AuthUserInteractor,
-) : ViewModel() {
+) : StateViewModel<SignInUiState>(SignInUiState()) {
 
-//    private val _screenState = MutableStateFlow<SignInScreenState>(SignInScreenState.NotSignedIn)
-//    val screenState: MutableStateFlow<SignInScreenState> get() = _screenState
+//    private val _uiState = MutableStateFlow<SignInUiState>(SignInUiState())
+//    private val _emailState = MutableStateFlow(InputFieldState())
+//    private val _passwordState = MutableStateFlow(ProtectedInputFieldState())
+//    private val _isLoading = MutableStateFlow(false)
 
-//   private val _screenEvent = MutableSharedFlow<ScreenEvent>()
-//    val screenEvent: SharedFlow<ScreenEvent> get() = _screenEvent.asSharedFlow()
+//    val uiState: StateFlow<SignInUiState> = combine(
+//        _emailState, _passwordState, _isLoading
+//    ) { email, password, isLoading ->
+//        val isFormValid = validateEmail(email.text).isValid
+//                && validatePassword(password.text).isValid
+//
+//        SignInUiState(
+//           isLoading = isLoading,
+//           isFormValid = isFormValid,
+//           email = email,
+//           password = password,
+//        )
+//    }.stateIn(
+//        scope = viewModelScope,
+//        initialValue = SignInUiState(),
+//        started = SharingStarted.Eagerly
+//    )
 
-    private val _uiState = MutableStateFlow<UiState>(UiState.NotSignedIn)
-    val uiState: MutableStateFlow<UiState> get() = _uiState
+    private val _uiEvent = Channel<SignInUiEvent>()
+    val uiEvent: Flow<SignInUiEvent> = _uiEvent.receiveAsFlow()
 
-    private val _loading = MutableStateFlow<Boolean>(false)
-    val loading: MutableStateFlow<Boolean> get() = _loading
+    init {
+        stateFlow
+            .filterNotNull()
+            .onEach {
+                updateState {
+                    copy(isFormValid = isFormValid(
+                        email = it.email.text,
+                        password = it.password.text
+                    ))
+                }
+            }
+            .launchIn(viewModelScope)
+    }
 
-    private val _screenEvent = Channel<ScreenEvent>()
-    val screenEvent: Flow<ScreenEvent> = _screenEvent.receiveAsFlow()
+    fun onEvent(event: SignInScreenEvent) {
+        when (event) {
+            is SignInScreenEvent.OnEmailChange -> {
+                updateState {
+                    copy(email = email.copy(
+                        error = validateEmail(event.value).message,
+                        text = event.value
+                    ))
+                }
+            }
+            is SignInScreenEvent.OnPasswordChange -> {
+                updateState {
+                    copy(password = password.copy(
+                        error = validatePassword(event.value).message,
+                        text = event.value
+                    ))
+                }
+            }
+            is SignInScreenEvent.OnPasswordVisibilityChange -> {
+                updateState {
+                    copy(password = password.copy(visible = event.visible))
+                }
+            }
+            is SignInScreenEvent.OnSignInClick -> {
+                if (state.isFormValid) {
+                    signIn(
+                        email = state.email.text,
+                        password = state.password.text
+                    )
+                }
+            }
+            is SignInScreenEvent.OnSignUpClick -> {
+                viewModelScope.launch {
+                    _uiEvent.send(SignInUiEvent.NavigateToSignUp)
+                }
+            }
+            is SignInScreenEvent.OnCloseClick -> {
+                viewModelScope.launch {
+                    _uiEvent.send(SignInUiEvent.NavigateBack)
+                }
+            }
+        }
+    }
 
-    fun onSignIn(email: String, password: String) {
+    private fun signIn(email: String, password: String) {
         viewModelScope.launch {
             authUserInteractor(UserAuthDto(email, password)).collect {
                 when (it) {
                     is ResourceState.Loading -> {
-                        _uiState.value = UiState.Loading
+                        updateState {
+                            copy(isLoading = true)
+                        }
                     }
                     is ResourceState.Success -> {
-                        _loading.emit(false)
-                        _uiState.value = UiState.SignedIn
+                        updateState {
+                            copy(isLoading = false)
+                        }
+                        _uiEvent.send(SignInUiEvent.NavigateToHome)
                     }
                     is ResourceState.ConnectivityError,
                     is ResourceState.AuthorizationError,
                     is ResourceState.Error -> {
-                        _uiState.value = UiState.NotSignedIn
-                        _screenEvent.send(ScreenEvent.ShowMessage(it.msg))
+                        updateState {
+                            copy(isLoading = false)
+                        }
+                        _uiEvent.send(SignInUiEvent.ShowMessage(it.msg))
                     }
                 }
             }
         }
     }
 
-    sealed class ScreenEvent {
-        class ShowMessage(val text: String) : ScreenEvent()
+    private fun isFormValid(email: String, password: String): Boolean {
+        return validateEmail(email).isValid && validatePassword(password).isValid
     }
 
-    sealed class UiState {
-        object NotSignedIn : UiState()
-        object Loading : UiState()
-        object SignedIn : UiState()
-    }
+    private fun validateEmail(value: String): ValidationResult = EmailTextValidator.validate(value)
+
+    private fun validatePassword(value: String): ValidationResult = PasswordTextValidator.validate(value)
 }

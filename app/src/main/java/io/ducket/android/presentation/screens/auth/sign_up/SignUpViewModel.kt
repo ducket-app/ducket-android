@@ -1,19 +1,12 @@
 package io.ducket.android.presentation.screens.auth.sign_up
 
-import android.app.Application
-import androidx.annotation.StringRes
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.*
-import androidx.navigation.NavBackStackEntry
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.ducket.android.common.ResourceState
 import io.ducket.android.data.remote.dto.UserCreateDto
 import io.ducket.android.domain.interactors.CreateUserInteractor
-import io.ducket.android.presentation.navigation.NavArgKey
-import io.ducket.android.presentation.navigation.NavArgKey.ARG_CURRENCY_ISO_CODE
+import io.ducket.android.presentation.StateViewModel
+import io.ducket.android.presentation.components.validator.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -21,68 +14,159 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SignUpViewModel @Inject constructor(
-    private val savedStateHandle: SavedStateHandle,
     private val createUserInteractor: CreateUserInteractor,
-) : ViewModel() {
+) : StateViewModel<SignUpUiState>(SignUpUiState()) {
 
-    private val _uiState = MutableStateFlow<UiState>(UiState.NotSignedUp)
-    val uiState: StateFlow<UiState> get() = _uiState
+    private val _uiEvent = Channel<SignUpUiEvent>()
+    val uiEvent: Flow<SignUpUiEvent> = _uiEvent.receiveAsFlow()
 
-    private val _screenEvent = Channel<ScreenEvent>()
-    val screenEvent: Flow<ScreenEvent> = _screenEvent.receiveAsFlow()
-
-    private val _loading = MutableStateFlow<Boolean>(false)
-    val loading: StateFlow<Boolean> get() = _loading
-
-    private val _showStartingBalanceHelpDialog = MutableStateFlow<Boolean>(false)
-    val showStartingBalanceHelpDialog: StateFlow<Boolean> get() = _showStartingBalanceHelpDialog
-
-    private val _selectedCurrency = MutableStateFlow<String>("")
-    val selectedCurrency: StateFlow<String> get() = _selectedCurrency
-
-    fun onCurrencySelect(isoCode: String) {
-        _selectedCurrency.value = isoCode
+    init {
+        stateFlow
+            .filterNotNull()
+            .onEach {
+                updateState {
+                    copy(isFormValid = isFormValid())
+                }
+            }
+            .launchIn(viewModelScope)
     }
 
-    fun onSignUp(name: String, email: String, currencyCode: String, password: String) {
+    fun onEvent(event: Event) {
+        when (event) {
+            is Event.OnNameChange -> {
+                updateState {
+                    copy(
+                        name = name.copy(
+                            error = validateName(event.value).message,
+                            text = event.value
+                        )
+                    )
+                }
+            }
+            is Event.OnEmailChange -> {
+                updateState {
+                    copy(
+                        email = email.copy(
+                            error = validateEmail(event.value).message,
+                            text = event.value
+                        )
+                    )
+                }
+            }
+            is Event.OnPasswordChange -> {
+                updateState {
+                    copy(
+                        password = password.copy(
+                            error = validatePassword(event.value).message,
+                            text = event.value
+                        )
+                    )
+                }
+            }
+            is Event.OnCurrencyChange -> {
+                updateState {
+                    copy(
+                        currency = currency.copy(
+                            error = validateCurrency(event.value).message,
+                            text = event.value
+                        )
+                    )
+                }
+            }
+            is Event.OnPasswordVisibilityChange -> {
+                updateState {
+                    copy(password = password.copy(visible = event.visible))
+                }
+            }
+            is Event.OnSignInClick -> {
+                viewModelScope.launch {
+                    _uiEvent.send(SignUpUiEvent.NavigateToSignIn)
+                }
+            }
+            is Event.OnCurrencyClick -> {
+                viewModelScope.launch {
+                    _uiEvent.send(SignUpUiEvent.NavigateToCurrencySelection(state.currency.text))
+                }
+            }
+            is Event.OnLegalCheckedChange -> {
+                updateState {
+                    copy(legalCheckbox = event.value)
+                }
+            }
+            is Event.OnContinueClick -> {
+                if (state.isFormValid) {
+                    signUp(
+                        name = state.name.text,
+                        email = state.email.text,
+                        currency = state.currency.text,
+                        password = state.password.text,
+                    )
+                }
+            }
+            is Event.OnCloseClick -> {
+                viewModelScope.launch {
+                    _uiEvent.send(SignUpUiEvent.NavigateBack)
+                }
+            }
+        }
+    }
+
+    private fun signUp(name: String, email: String, currency: String, password: String) {
         viewModelScope.launch {
-            val userCreateDto = UserCreateDto(name, email, password, currencyCode)
+            val userCreateDto = UserCreateDto(name, email, password, currency)
 
             createUserInteractor(userCreateDto).collect {
                 when (it) {
                     is ResourceState.Loading -> {
-                        _uiState.value = UiState.Loading
+                        updateState {
+                            copy(isLoading = true)
+                        }
                     }
                     is ResourceState.Success -> {
-                        _loading.emit(false)
-                        _uiState.value = UiState.SignedUp
+                        updateState {
+                            copy(isLoading = false)
+                        }
+                        _uiEvent.send(SignUpUiEvent.NavigateToStartBalance)
                     }
                     is ResourceState.ConnectivityError,
                     is ResourceState.AuthorizationError,
                     is ResourceState.Error -> {
-                        _uiState.value = UiState.NotSignedUp
-                        _screenEvent.send(ScreenEvent.ShowMessage(it.msg))
+                        updateState {
+                            copy(isLoading = false)
+                        }
+                        _uiEvent.send(SignUpUiEvent.ShowMessage(it.msg))
                     }
                 }
             }
         }
     }
 
-    fun onStartingBalanceHelpClick() {
-        _showStartingBalanceHelpDialog.value = true
+    private fun isFormValid(): Boolean {
+        return listOf(validateName(state.name.text),
+            validateEmail(state.email.text),
+            validateCurrency(state.currency.text),
+            validatePassword(state.password.text),
+        ).all { it.isValid } && state.legalCheckbox
     }
 
-    fun onStartingBalanceHelpDialogDismiss() {
-        _showStartingBalanceHelpDialog.value = false
-    }
+    private fun validateName(value: String) = NameTextValidator.validate(value)
 
-    sealed class ScreenEvent {
-        class ShowMessage(val text: String) : ScreenEvent()
-    }
+    private fun validateEmail(value: String) = EmailTextValidator.validate(value)
 
-    sealed class UiState {
-        object NotSignedUp : UiState()
-        object Loading : UiState()
-        object SignedUp : UiState()
+    private fun validatePassword(value: String) = PasswordTextValidator.validate(value)
+
+    private fun validateCurrency(value: String) = CurrencyTextValidator.validate(value)
+
+    sealed class Event {
+        data class OnNameChange(val value: String) : Event()
+        data class OnEmailChange(val value: String) : Event()
+        data class OnPasswordChange(val value: String) : Event()
+        data class OnPasswordVisibilityChange(val visible: Boolean) : Event()
+        data class OnCurrencyChange(val value: String) : Event()
+        data class OnLegalCheckedChange(val value: Boolean) : Event()
+        object OnSignInClick : Event()
+        object OnContinueClick : Event()
+        object OnCurrencyClick : Event()
+        object OnCloseClick : Event()
     }
 }

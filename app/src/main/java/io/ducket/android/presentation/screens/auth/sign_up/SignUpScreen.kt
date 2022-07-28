@@ -1,125 +1,112 @@
 package io.ducket.android.presentation.screens.auth.sign_up
 
-import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.SavedStateHandle
-import com.google.accompanist.pager.ExperimentalPagerApi
+import androidx.lifecycle.Lifecycle
 import io.ducket.android.R
 import io.ducket.android.presentation.states.*
 import io.ducket.android.presentation.components.*
 import io.ducket.android.presentation.components.segments.SegmentedProgressIndicator
 import io.ducket.android.presentation.navigation.*
-import io.ducket.android.presentation.navigation.NavArgKey.ARG_CURRENCY_ISO_CODE
-import io.ducket.android.presentation.ui.theme.DucketAndroidTheme
-import io.ducket.android.presentation.ui.theme.SpaceMedium
-import io.ducket.android.presentation.ui.theme.SpaceSmall
-import io.ducket.android.presentation.ui.theme.subtitle
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collect
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
+import com.ramcosta.composedestinations.annotation.Destination
+import com.ramcosta.composedestinations.navigation.navigate
+import com.ramcosta.composedestinations.result.NavResult
+import com.ramcosta.composedestinations.result.ResultRecipient
+import io.ducket.android.presentation.screens.InputFieldState
+import io.ducket.android.presentation.screens.ProtectedInputFieldState
+import io.ducket.android.presentation.screens.destinations.CurrencySelectionScreenDestination
+import io.ducket.android.presentation.screens.destinations.SignInScreenDestination
+import io.ducket.android.presentation.screens.destinations.WelcomeScreenDestination
+import io.ducket.android.presentation.ui.theme.*
 
-@ExperimentalPagerApi
-@ExperimentalAnimationApi
 @ExperimentalComposeUiApi
+@AuthNavGraph
+@Destination
 @Composable
 fun SignUpScreen(
-    viewModel: SignUpViewModel,
-    scaffoldState: ScaffoldState,
-    appSnackbarManager: AppSnackbarManager,
-    navigateBack: () -> Unit,
-    navigateToHomeScreen: () -> Unit,
-    navigateToSignInScreen: () -> Unit,
-    navigateToCurrencySelectionScreen: (String) -> Unit,
+    viewModel: SignUpViewModel = hiltViewModel(),
+    navController: NavController,
+    snackbarManager: AppSnackbarManager,
+    result: ResultRecipient<CurrencySelectionScreenDestination, String>
 ) {
-    val screenState = rememberSignUpScreenState()
-    val uiState by viewModel.uiState.collectAsState()
-    val showStartingBalanceHelpDialog by viewModel.showStartingBalanceHelpDialog.collectAsState()
-    val selectedCurrency by viewModel.selectedCurrency.collectAsState()
-//    val selectedCurrency by savedStateHandle.getLiveData<String>(ARG_CURRENCY_ISO_CODE).observeAsState("")
+    val uiState by viewModel.stateFlow.collectAsState()
+    val scrollState = rememberScrollState()
 
-    screenState.currencyFieldState.value = selectedCurrency
-    screenState.signUpButtonState.enabled = screenState.signUpFormValid() && uiState !is SignUpViewModel.UiState.Loading
+    result.onNavResult { res ->
+        if (res is NavResult.Value) {
+            viewModel.onEvent(SignUpViewModel.Event.OnCurrencyChange(res.value))
+        }
+    }
 
     LaunchedEffect(Unit) {
-        viewModel.screenEvent.collect {
-            if (it is SignUpViewModel.ScreenEvent.ShowMessage) {
-                appSnackbarManager.showMessage(it.text)
+        viewModel.uiEvent.collect {
+            when (it) {
+                is SignUpUiEvent.ShowMessage -> {
+                    snackbarManager.showMessage(it.text)
+                }
+                is SignUpUiEvent.NavigateToSignIn -> {
+                    navController.navigate(SignInScreenDestination) {
+                        popUpTo(WelcomeScreenDestination.route)
+                    }
+                }
+                is SignUpUiEvent.NavigateToStartBalance -> {
+                    // TODO
+                }
+                is SignUpUiEvent.NavigateToCurrencySelection -> {
+                    navController.navigate(CurrencySelectionScreenDestination(it.currency))
+                }
+                is SignUpUiEvent.NavigateBack -> {
+                    navController.popBackStack()
+                }
             }
         }
     }
 
-    Scaffold(
-        scaffoldState = scaffoldState,
-        topBar = {
-            SignUpAppBar(onCloseClick = navigateBack)
+    SignUpContent(
+        state = uiState,
+        scrollState = scrollState,
+        onNameChange = { viewModel.onEvent(SignUpViewModel.Event.OnNameChange(it)) },
+        onEmailChange = { viewModel.onEvent(SignUpViewModel.Event.OnEmailChange(it)) },
+        onCurrencyChange = { viewModel.onEvent(SignUpViewModel.Event.OnCurrencyChange(it)) },
+        onPasswordChange = { viewModel.onEvent(SignUpViewModel.Event.OnPasswordChange(it)) },
+        onPasswordVisibilityChange = { viewModel.onEvent(SignUpViewModel.Event.OnPasswordVisibilityChange(it)) },
+        onCurrencyClick = { viewModel.onEvent(SignUpViewModel.Event.OnCurrencyClick) },
+        onContinueClick = { viewModel.onEvent(SignUpViewModel.Event.OnContinueClick) },
+        onCloseClick = { viewModel.onEvent(SignUpViewModel.Event.OnCloseClick) },
+        onSignInClick = { viewModel.onEvent(SignUpViewModel.Event.OnSignInClick) },
+        onLegalCheckedChange = { viewModel.onEvent(SignUpViewModel.Event.OnLegalCheckedChange(it)) },
+        onTermsLinkClick = {
+            // TODO
         },
-        content = {
-            when (uiState) {
-                is SignUpViewModel.UiState.Loading,
-                is SignUpViewModel.UiState.NotSignedUp -> {
-                    if (uiState is SignUpViewModel.UiState.Loading) {
-                        screenState.toggleControls(false)
-                        LoadingDialog()
-                    } else {
-                        screenState.toggleControls(true)
-                    }
-
-                    SignUpContent(
-                        nameFieldState = screenState.nameFieldState,
-                        emailFieldState = screenState.emailFieldState,
-                        currencyFieldState = screenState.currencyFieldState,
-                        balanceFieldState = screenState.balanceFieldState,
-                        passwordFieldState = screenState.passwordFieldState,
-                        confirmPasswordFieldState = screenState.confirmPasswordFieldState,
-                        signUpButtonState = screenState.signUpButtonState,
-                        showStartingBalanceHelpDialog = showStartingBalanceHelpDialog,
-                        onStartingBalanceHelpClick = {
-                            viewModel.onStartingBalanceHelpClick()
-                        },
-                        onStartingBalanceHelpDialogDismiss = {
-                            viewModel.onStartingBalanceHelpDialogDismiss()
-                        },
-                        onSelectCurrencyFieldClick = navigateToCurrencySelectionScreen,
-                        onSignInLinkClick = navigateToSignInScreen,
-                        onSignUpClick = {
-                            viewModel.onSignUp(
-                                name = screenState.nameFieldState.value,
-                                email = screenState.emailFieldState.value,
-                                currencyCode = screenState.currencyFieldState.value,
-                                // startBalance = screenState.balanceFieldState.value,
-                                password = screenState.passwordFieldState.value,
-                            )
-                        },
-                    )
-                }
-                is SignUpViewModel.UiState.SignedUp -> {
-                    // appState.navHostController.navigate(Graph.Main.route) {
-                    //     popUpTo(Graph.Host.route)
-                    // }
-                }
-            }
+        onPrivacyLinkClick = {
+            // TODO
         }
     )
 }
@@ -128,200 +115,236 @@ fun SignUpScreen(
 fun SignUpAppBar(
     onCloseClick: () -> Unit,
 ) {
-    ChildAppBar(
-        title = stringResource(id = R.string.sign_up_title),
+    AppBar(
         elevation = 0.dp,
-        onActionClick = onCloseClick,
-        actionIcon = Icons.Default.Close,
+        navigationButton = {
+            IconButton(onClick = onCloseClick) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = Icons.Default.Close.name,
+                    modifier = Modifier.padding(horizontal = SpaceSmall)
+                )
+            }
+        }
     )
 }
 
-@ExperimentalPagerApi
-@ExperimentalAnimationApi
-@ExperimentalComposeUiApi
-@Composable
-fun SignUpContent(
-    nameFieldState: NameFieldState,
-    emailFieldState: EmailFieldState,
-    currencyFieldState: TextFieldState,
-    balanceFieldState: TextFieldState,
-    showStartingBalanceHelpDialog: Boolean,
-    passwordFieldState: PasswordFieldState,
-    confirmPasswordFieldState: ConfirmPasswordFieldState,
-    signUpButtonState: ButtonState,
-    onSignUpClick: () -> Unit,
-    onStartingBalanceHelpDialogDismiss: () -> Unit,
-    onStartingBalanceHelpClick: () -> Unit,
-    onSelectCurrencyFieldClick: (String) -> Unit,
-    onSignInLinkClick: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colors.surface)
-            .padding(SpaceMedium),
-    ) {
-        val keyboardController = LocalSoftwareKeyboardController.current
-        val focusManager = LocalFocusManager.current
-        val scrollState = rememberScrollState()
+//@OptIn(
+//    ExperimentalPagerApi::class,
+//    ExperimentalComposeUiApi::class,
+//)
+//@Composable
+//fun SignUpContent(
+//    onCurrencyFieldClick: () -> Unit
+//) {
+//    val steps = SignUpStep.values()
+//    val scrollState = rememberScrollState()
+//    val pagerState = rememberPagerState(pageCount = steps.size)
+//    val coroutineScope = rememberCoroutineScope()
+//
+//    val keyboardController = LocalSoftwareKeyboardController.current
+//    val focusManager = LocalFocusManager.current
+//
+//    val name = rememberSaveable { mutableStateOf("") }
+//
+//    val changeStep: (Int) -> Unit = { nextPage ->
+//        keyboardController?.hide()
+//        focusManager.clearFocus()
+//
+//        coroutineScope.launch {
+//            if (nextPage in 0 until pagerState.pageCount) {
+//                pagerState.animateScrollToPage(
+//                    page = nextPage,
+//                    animationSpec = tween(durationMillis = 250)
+//                )
+//            }
+//        }
+//    }
+//
+//    Column {
+//        SignUpAppBar(onCloseClick = {})
+//
+//        Box(
+//            modifier = Modifier
+//                .fillMaxSize()
+//                .background(MaterialTheme.colors.surface)
+//                .padding(SpaceMedium),
+//        ) {
+//            Column(
+//                modifier = Modifier
+//                    .fillMaxSize()
+//                    .verticalScroll(scrollState),
+//                verticalArrangement = Arrangement.SpaceBetween,
+//                horizontalAlignment = Alignment.CenterHorizontally,
+//            ) {
+//                Column(
+//                    modifier = Modifier.fillMaxWidth(),
+//                    verticalArrangement = Arrangement.SpaceBetween,
+//                    horizontalAlignment = Alignment.CenterHorizontally,
+//                ) {
+//                    Crossfade(
+//                        targetState = pagerState.targetPage,
+//                        animationSpec = tween(durationMillis = 250)
+//                    ) { page ->
+//                        Text(
+//                            modifier = Modifier.fillMaxWidth(),
+//                            text = steps[page].title.asString(),
+//                            textAlign = TextAlign.Start,
+//                            style = MaterialTheme.typography.h4
+//                        )
+//                    }
+//
+//                    Text(
+//                        modifier = Modifier.fillMaxWidth(),
+//                        text = stringResource(
+//                            R.string.step_of,
+//                            pagerState.targetPage + 1,
+//                            pagerState.pageCount),
+//                        textAlign = TextAlign.Start,
+//                        style = MaterialTheme.typography.h5,
+//                        color = MaterialTheme.colors.caption,
+//                    )
+//
+//                    Spacer(Modifier.height(SpaceMedium))
+//
+//                    HorizontalPager(
+//                        modifier = Modifier.fillMaxSize(),
+//                        state = pagerState,
+//                        dragEnabled = true,
+//                        verticalAlignment = Alignment.Top,
+//                        itemSpacing = SpaceMedium,
+//                    ) { page ->
+//                        Card(
+//                            elevation = 0.dp,
+//                            modifier = Modifier
+//                                .graphicsLayer {
+//                                    val pageOffset = calculateCurrentOffsetForPage(page).absoluteValue
+//
+//                                    lerp(
+//                                        start = 0.8f,
+//                                        stop = 1f,
+//                                        fraction = 1f - pageOffset.coerceIn(0f, 1f)
+//                                    ).also { scale ->
+//                                        scaleX = scale
+//                                        scaleY = scale
+//                                    }
+//
+//                                    alpha = lerp(
+//                                        start = 0.7f,
+//                                        stop = 1f,
+//                                        fraction = 1f - pageOffset.coerceIn(0f, 1f)
+//                                    )
+//                                }
+//                        ) {
+//                            when (SignUpStep.values()[page]) {
+//                                SignUpStep.PERSONAL_DATA -> {
+//                                    SignUpFirstStep(
+//                                        name = name,
+//                                    )
+//                                }
+//                                SignUpStep.PASSWORD_DATA -> {
+//                                    SignUpSecondStep()
+//                                }
+//                                SignUpStep.BALANCE_DATA -> {
+//                                    SignUpThirdStep(
+//                                        onCurrencyFieldClick = {
+//                                            onCurrencyFieldClick()
+//                                        }
+//                                    )
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//
+//                Column(
+//                    modifier = Modifier.wrapContentSize(),
+//                    horizontalAlignment = Alignment.CenterHorizontally,
+//                    verticalArrangement = Arrangement.spacedBy(SpaceMedium),
+//                ) {
+//                    SignUpActionButtons(
+//                        onBackClick = {
+//                            changeStep(pagerState.currentPage - 1)
+//                        },
+//                        onContinueClick = {
+//                            changeStep(pagerState.currentPage + 1)
+//                        }
+//                    )
+//
+//                    ActionText(
+//                        text = stringResource(id = R.string.sign_up_helper),
+//                        link = stringResource(id = R.string.sign_in_title),
+//                        onActionClick = {
+//                            // onSignInClick()
+//                        },
+//                    )
+//                }
+//            }
+//        }
+//    }
+//}
 
-        if (showStartingBalanceHelpDialog) {
-            AlertDialog(
-                title = {
-                    Text(
-                        text = stringResource(id = R.string.start_balance_help_heading),
-                        style = MaterialTheme.typography.h6,
-                    )
-                },
-                text = {
-                    Text(
-                        text = stringResource(id = R.string.start_balance_help_helper),
-                        style = MaterialTheme.typography.body1,
-                    )
-                },
-                onDismissRequest = onStartingBalanceHelpDialogDismiss,
-                confirmButton = {
-                    TextButton(onClick = onStartingBalanceHelpDialogDismiss) {
-                        Text(
-                            text = stringResource(id = R.string.got_it_button),
-                            style = MaterialTheme.typography.subtitle2,
-                        )
-                    }
-                }
-            )
-        }
+//@Composable
+//fun PasswordRequirementsColumn(
+//    modifier: Modifier = Modifier,
+//    satisfiedRequirements: List<PasswordRequirement>
+//) {
+//    Column(
+//        modifier = modifier,
+//        verticalArrangement = Arrangement.spacedBy(SpaceSmall)
+//    ) {
+//        PasswordRequirement.values().forEach { requirement ->
+//            Requirement(
+//                message = requirement.label.asString(),
+//                satisfied = satisfiedRequirements.contains(requirement)
+//            )
+//        }
+//    }
+//}
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.SpaceBetween,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .align(Alignment.Start),
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Text(
-                    text = stringResource(id = R.string.sign_up_heading),
-                    style = MaterialTheme.typography.h4,
-                )
-                Text(
-                    text = stringResource(id = R.string.sign_up_subheading),
-                    style = MaterialTheme.typography.h5,
-                    color = MaterialTheme.colors.subtitle,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(SpaceSmall))
-
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(SpaceSmall),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                NameTextField(
-                    modifier = Modifier.fillMaxWidth(),
-                    state = nameFieldState,
-                    onImeAction = {
-                        focusManager.moveFocus(FocusDirection.Down)
-                    }
-                )
-
-                EmailTextField(
-                    modifier = Modifier.fillMaxWidth(),
-                    state = emailFieldState,
-                    onImeAction = {
-                        focusManager.moveFocus(FocusDirection.Down)
-                    }
-                )
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(SpaceMedium),
-                ) {
-                    CurrencyTextField(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        state = currencyFieldState,
-                        onClick = onSelectCurrencyFieldClick
-                    )
-
-                    BalanceTextField(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f),
-                        state = balanceFieldState,
-                        onHelpClick = onStartingBalanceHelpClick,
-                        onImeAction = {
-                            focusManager.moveFocus(FocusDirection.Down)
-                        }
-                    )
-                }
-
-                PasswordTextField(
-                    modifier = Modifier.fillMaxWidth(),
-                    state = passwordFieldState,
-                    onImeAction = {
-                        focusManager.moveFocus(FocusDirection.Down)
-                    }
-                )
-
-                ConfirmPasswordTextField(
-                    modifier = Modifier.fillMaxWidth(),
-                    state = confirmPasswordFieldState,
-                    onImeAction = {
-                        keyboardController?.hide()
-                        focusManager.clearFocus()
-
-                        onSignUpClick()
-                    }
-                )
-            }
-
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(SpaceMedium),
-            ) {
-                PrimaryButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    text = stringResource(id = R.string.sign_up_button),
-                    state = signUpButtonState,
-                    onClick = {
-                        keyboardController?.hide()
-                        focusManager.clearFocus()
-
-                        onSignUpClick()
-                    },
-                )
-
-                ActionText(
-                    text = stringResource(id = R.string.sign_up_helper),
-                    link = stringResource(id = R.string.sign_in_title),
-                    onActionClick = onSignInLinkClick,
-                )
-            }
-        }
-    }
-}
+//@Composable
+//fun Requirement(
+//    modifier: Modifier = Modifier,
+//    message: String,
+//    satisfied: Boolean
+//) {
+//    val tint = if (satisfied) MaterialTheme.colors.success
+//    else MaterialTheme.colors.onSurface.copy(alpha = ContentAlpha.disabled)
+//
+//    val icon = if (satisfied) Icons.Default.Check else Icons.Default.Close
+//
+//    Row(
+//        modifier = modifier,
+//        horizontalArrangement = Arrangement.spacedBy(SpaceSmall),
+//        verticalAlignment = Alignment.CenterVertically
+//    ) {
+//        Icon(
+//            modifier = Modifier.size(16.dp),
+//            imageVector = icon,
+//            contentDescription = null,
+//            tint = tint
+//        )
+//        Text(
+//            text = message,
+//            style = MaterialTheme.typography.subtitle2,
+//            color = tint,
+//        )
+//    }
+//}
 
 @Composable
 fun NameTextField(
     modifier: Modifier = Modifier,
-    state: NameFieldState,
-    onImeAction: () -> Unit = {},
+    state: InputFieldState,
+    onValueChange: (String) -> Unit,
+    onImeAction: () -> Unit
 ) {
-    AppTextField(
+    TextField(
         modifier = modifier,
-        state = state,
-        error = stringResource(id = R.string.invalid_name_error),
-        label = {
-            Text(stringResource(id = R.string.name_label))
-        },
+        label = stringResource(id = R.string.name_label),
+        value = state.text,
+        error = state.error?.asString(),
+        onValueChange = onValueChange,
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Text,
             imeAction = ImeAction.Next,
@@ -334,19 +357,68 @@ fun NameTextField(
     )
 }
 
+//@Composable
+//fun StartBalanceTextField(
+//    modifier: Modifier = Modifier,
+//) {
+//    TextField(
+//        modifier = modifier,
+//        label = stringResource(id = R.string.name_label),
+//        value = "",
+//        error = null,
+//        onValueChange = {
+//
+//        },
+//        keyboardOptions = KeyboardOptions(
+//            keyboardType = KeyboardType.Number,
+//            imeAction = ImeAction.Next,
+//        ),
+//        keyboardActions = KeyboardActions(
+//            onNext = {
+//                // onImeAction()
+//            }
+//        ),
+//        trailingIcon = Icons.Default.Help
+//    )
+//}
+
+@Composable
+fun SettlementCurrencyTextField(
+    modifier: Modifier = Modifier,
+    state: InputFieldState,
+    onValueChange: (String) -> Unit,
+    onClick: () -> Unit,
+) {
+    TextField(
+        modifier = modifier,
+        label = stringResource(id = R.string.currency_label),
+        hint = stringResource(id = R.string.select_currency_hint),
+        value = state.text,
+        error = state.error?.asString(),
+        enabled = false,
+        onValueChange = onValueChange,
+        onClick = onClick,
+        onTrailingIconClick = onClick,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Text,
+        ),
+        trailingIcon = Icons.Default.ChevronRight,
+    )
+}
+
 @Composable
 fun EmailTextField(
     modifier: Modifier = Modifier,
-    state: TextFieldState,
-    onImeAction: () -> Unit = {},
+    state: InputFieldState,
+    onValueChange: (String) -> Unit,
+    onImeAction: () -> Unit,
 ) {
-    AppTextField(
+    TextField(
         modifier = modifier,
-        state = state,
-        error = stringResource(id = R.string.invalid_email_error),
-        label = {
-            Text(stringResource(id = R.string.email_label))
-        },
+        label = stringResource(id = R.string.email_label),
+        value = state.text,
+        error = state.error?.asString(),
+        onValueChange = onValueChange,
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Email,
             imeAction = ImeAction.Next,
@@ -360,39 +432,42 @@ fun EmailTextField(
 }
 
 @Composable
-fun CurrencyTextField(
+fun PasswordTextField(
     modifier: Modifier = Modifier,
-    state: TextFieldState,
-    onClick: (String) -> Unit,
+    state: ProtectedInputFieldState,
+    onValueChange: (String) -> Unit,
+    onVisibilityChange: (Boolean) -> Unit,
+    onImeAction: () -> Unit,
 ) {
-    SelectableTextField(
-        modifier = modifier,
-        state = state,
-        label = stringResource(id = R.string.currency_label),
-        placeholder = stringResource(id = R.string.select_currency_placeholder),
-        trailingIcon = Icons.Default.ChevronRight,
-        onClick = {
-            onClick(state.value)
-        }
-    )
-}
+    val transformation = if (state.visible) {
+        VisualTransformation.None
+    } else {
+        PasswordVisualTransformation()
+    }
 
-@Composable
-fun BalanceTextField(
-    modifier: Modifier = Modifier,
-    state: TextFieldState,
-    onHelpClick: () -> Unit,
-    onImeAction: () -> Unit = {},
-) {
-    AppTextField(
+    val iconImage = if (transformation == VisualTransformation.None) {
+        Icons.Filled.Visibility
+    } else {
+        Icons.Filled.VisibilityOff
+    }
+
+    TextField(
         modifier = modifier,
-        state = state,
-        error = stringResource(id = R.string.invalid_balance_error),
-        label = {
-            Text(stringResource(id = R.string.balance_label))
+        value = state.text,
+        error = state.error?.asString(),
+        label = stringResource(id = R.string.password_label),
+        trailingIcon = iconImage,
+        onTrailingIconClick = {
+            onVisibilityChange(!state.visible)
         },
-        keyboardOptions = KeyboardOptions(
-            keyboardType = KeyboardType.Number,
+        onClearFocus = {
+            onVisibilityChange(false)
+        },
+        onValueChange = {
+            onValueChange(it)
+        },
+        keyboardOptions = KeyboardOptions.Default.copy(
+            keyboardType = KeyboardType.Password,
             imeAction = ImeAction.Next,
         ),
         keyboardActions = KeyboardActions(
@@ -400,95 +475,451 @@ fun BalanceTextField(
                 onImeAction()
             }
         ),
-        trailingIcon = {
-            IconButton(onClick = onHelpClick) {
-                Icon(
-                    imageVector = Icons.Default.Help,
-                    contentDescription = stringResource(id = R.string.start_balance_desc),
-                )
-            }
+        visualTransformation = transformation
+    )
+
+    OnLifecycleEvent { owner, event ->
+        if (event == Lifecycle.Event.ON_PAUSE) {
+            onVisibilityChange(false)
         }
-    )
+    }
 }
 
-@ExperimentalComposeUiApi
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun PasswordTextField(
+fun LegalCheckbox(
     modifier: Modifier = Modifier,
-    state: PasswordFieldState,
-    onImeAction: () -> Unit = {},
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    onTermsLinkClick: () -> Unit,
+    onPrivacyLinkClick: () -> Unit,
 ) {
-    ProtectedTextField(
-        modifier = modifier,
-        state = state,
-        error = stringResource(id = R.string.invalid_password_error),
-        label = {
-            Text(stringResource(id = R.string.password_label))
-        },
-        keyboardActions = KeyboardActions(
-            onNext = {
-                onImeAction()
-            }
-        ),
-    )
-}
+    val termsLink = stringResource(id = R.string.signup_legal_terms)
+    val privacyLink = stringResource(id = R.string.signup_legal_privacy)
 
-@ExperimentalComposeUiApi
-@Composable
-fun ConfirmPasswordTextField(
-    modifier: Modifier = Modifier,
-    state: ConfirmPasswordFieldState,
-    onImeAction: () -> Unit = {},
-) {
-    ProtectedTextField(
+    Row(
         modifier = modifier,
-        state = state,
-        error = stringResource(id = R.string.invalid_confirm_password_error),
-        label = {
-            Text(stringResource(id = R.string.confirm_password_label))
-        },
-        imeAction = ImeAction.Next,
-        keyboardActions = KeyboardActions(
-            onNext = {
-                onImeAction()
+        horizontalArrangement = Arrangement.spacedBy(SpaceSmall),
+        verticalAlignment = Alignment.Top,
+    ) {
+        CompositionLocalProvider(LocalMinimumTouchTargetEnforcement provides false) {
+            Checkbox(
+                modifier = Modifier.padding(2.dp),
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                colors = CheckboxDefaults.colors(
+                    uncheckedColor =  MaterialTheme.colors.onSurface.copy(alpha = ContentAlpha.disabled)
+                )
+            )
+        }
+
+        HyperlinkText(
+            fullText = stringResource(id = R.string.signup_legal),
+            linkText = listOf(termsLink, privacyLink),
+            onLinkClick = { link ->
+                when (link) {
+                    termsLink -> onTermsLinkClick()
+                    privacyLink -> onPrivacyLinkClick()
+                }
             }
-        ),
-    )
+        )
+    }
 }
 
 @Preview
-@ExperimentalComposeUiApi
-@ExperimentalAnimationApi
-@ExperimentalPagerApi
 @Composable
-private fun SignUpScreenPreview() {
+fun SignUpPersonalStepPreview() {
     DucketAndroidTheme {
-//        SignUpScreen(
-//            appState = AppState(
-//                scaffoldState = rememberScaffoldState(),
-//                navHostController = rememberAnimatedNavController(),
-//                resources = LocalContext.current.resources,
-//                coroutineScope = rememberCoroutineScope(),
-//            ),
-//            viewModel = hiltViewModel(),
-//        )
-//        SignUpContent(
-//            nameFieldState = NameFieldState(),
-//            emailFieldState = EmailFieldState(),
-//            currencyFieldState = CurrencyFieldState(),
-//            balanceFieldState = BalanceFieldState(),
-//            passwordFieldState = PasswordFieldState(),
-//            confirmPasswordFieldState = ConfirmPasswordFieldState(PasswordFieldState()),
-//            signUpButtonState = ButtonState(),
-//            showStartingBalanceHelpDialog = false,
-//            onSignUpClick = {},
-//            onSelectCurrencyFieldClick = {},
-//            onSignInLinkClick = {},
-//            onStartingBalanceHelpClick = {},
-//            onStartingBalanceHelpDialogDismiss = {},
-//        )
+        SignUpContent(
+            state = SignUpUiState(),
+            scrollState = rememberScrollState(),
+            onNameChange = {},
+            onEmailChange = {},
+            onCurrencyChange = {},
+            onPasswordChange = {},
+            onPasswordVisibilityChange = {},
+            onCloseClick = {},
+            onCurrencyClick = {},
+            onContinueClick = {},
+            onSignInClick = {},
+            onLegalCheckedChange = {},
+            onTermsLinkClick = {},
+            onPrivacyLinkClick = {},
+        )
     }
 }
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+fun SignUpContent(
+    state: SignUpUiState,
+    scrollState: ScrollState,
+    onNameChange: (String) -> Unit,
+    onEmailChange: (String) -> Unit,
+    onCurrencyChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onPasswordVisibilityChange: (Boolean) -> Unit,
+    onCloseClick: () -> Unit,
+    onCurrencyClick: () -> Unit,
+    onContinueClick: () -> Unit,
+    onSignInClick: () -> Unit,
+    onLegalCheckedChange: (Boolean) -> Unit,
+    onTermsLinkClick: () -> Unit,
+    onPrivacyLinkClick: () -> Unit,
+) {
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+
+    if (state.isLoading) {
+        LoadingDialog()
+    }
+
+//        if (showStartingBalanceHelpDialog) {
+//            AlertDialog(
+//                title = {
+//                    Text(
+//                        text = stringResource(id = R.string.start_balance_help_heading),
+//                        style = MaterialTheme.typography.h6,
+//                    )
+//                },
+//                text = {
+//                    Text(
+//                        text = stringResource(id = R.string.start_balance_help_helper),
+//                        style = MaterialTheme.typography.body1,
+//                    )
+//                },
+//                onDismissRequest = onStartingBalanceHelpDialogDismiss,
+//                confirmButton = {
+//                    TextButton(onClick = onStartingBalanceHelpDialogDismiss) {
+//                        Text(
+//                            text = stringResource(id = R.string.got_it_button),
+//                            style = MaterialTheme.typography.subtitle2,
+//                        )
+//                    }
+//                }
+//            )
+//        }
+
+    Column(
+        modifier = Modifier.pointerInput(Unit) {
+            detectTapGestures(onTap = {
+                focusManager.clearFocus()
+            })
+        }
+    ) {
+        SignUpAppBar(onCloseClick = onCloseClick)
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colors.surface)
+                .padding(
+                    start = SpaceMedium,
+                    end = SpaceMedium,
+                    bottom = SpaceMedium,
+                ),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.SpaceBetween,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        modifier = Modifier.fillMaxWidth(),
+                        text = stringResource(id = R.string.sign_up_title),
+                        style = MaterialTheme.typography.h4,
+                        textAlign = TextAlign.Start,
+                    )
+                    Text(
+                        modifier = Modifier.fillMaxWidth(),
+                        text = stringResource(id = R.string.sign_up_personal_step_subtitle),
+                        style = MaterialTheme.typography.h5,
+                        color = MaterialTheme.colors.caption,
+                        textAlign = TextAlign.Start
+                    )
+
+                    Spacer(modifier = Modifier.height(SpaceMedium))
+
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(SpaceSmall),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        NameTextField(
+                            modifier = Modifier.fillMaxWidth(),
+                            state = state.name,
+                            onValueChange = onNameChange,
+                            onImeAction = {
+                                focusManager.moveFocus(FocusDirection.Down)
+                            }
+                        )
+
+                        EmailTextField(
+                            modifier = Modifier.fillMaxWidth(),
+                            state = state.email,
+                            onValueChange = onEmailChange,
+                            onImeAction = {
+                                focusManager.moveFocus(FocusDirection.Down)
+                            }
+                        )
+
+                        SettlementCurrencyTextField(
+                            modifier = Modifier.fillMaxWidth(),
+                            state = state.currency,
+                            onValueChange = onCurrencyChange,
+                            onClick = onCurrencyClick
+                        )
+
+                        PasswordTextField(
+                            modifier = Modifier.fillMaxWidth(),
+                            state = state.password,
+                            onValueChange = onPasswordChange,
+                            onVisibilityChange = onPasswordVisibilityChange,
+                            onImeAction = {
+                                focusManager.moveFocus(FocusDirection.Down)
+                            }
+                        )
+
+                        LegalCheckbox(
+                            modifier = Modifier.fillMaxWidth(),
+                            checked = state.legalCheckbox,
+                            onCheckedChange = onLegalCheckedChange,
+                            onTermsLinkClick = onTermsLinkClick,
+                            onPrivacyLinkClick = onPrivacyLinkClick,
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(SpaceMedium))
+
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(SpaceMedium),
+                ) {
+                    ContinueButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = state.isFormValid,
+                        onClick = {
+                            keyboardController?.hide()
+                            focusManager.clearFocus()
+
+                            onContinueClick()
+                        },
+                    )
+
+                    ActionText(
+                        text = stringResource(id = R.string.sign_up_helper),
+                        link = stringResource(id = R.string.sign_up_helper_link),
+                        onActionClick = onSignInClick,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ContinueButton(
+    modifier: Modifier = Modifier,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    AppPrimaryButton(
+        modifier = modifier,
+        text = stringResource(id = R.string.continue_button),
+        enabled = enabled,
+        onClick = onClick,
+    )
+}
+
+//@Composable
+//fun NameTextField(
+//    modifier: Modifier = Modifier,
+//    state: NameFieldState,
+//    onImeAction: () -> Unit = {},
+//) {
+//    AppTextField(
+//        modifier = modifier,
+//        state = state,
+//        error = stringResource(id = R.string.invalid_name_error),
+//        label = {
+//            Text(stringResource(id = R.string.name_label))
+//        },
+//        keyboardOptions = KeyboardOptions(
+//            keyboardType = KeyboardType.Text,
+//            imeAction = ImeAction.Next,
+//        ),
+//        keyboardActions = KeyboardActions(
+//            onNext = {
+//                onImeAction()
+//            }
+//        ),
+//    )
+//}
+//
+//@Composable
+//fun EmailTextField(
+//    modifier: Modifier = Modifier,
+//    state: TextFieldState,
+//    onImeAction: () -> Unit = {},
+//) {
+//    AppTextField(
+//        modifier = modifier,
+//        state = state,
+//        error = stringResource(id = R.string.invalid_email_error),
+//        label = {
+//            Text(stringResource(id = R.string.email_label))
+//        },
+//        keyboardOptions = KeyboardOptions(
+//            keyboardType = KeyboardType.Email,
+//            imeAction = ImeAction.Next,
+//        ),
+//        keyboardActions = KeyboardActions(
+//            onNext = {
+//                onImeAction()
+//            }
+//        ),
+//    )
+//}
+//
+//@Composable
+//fun CurrencyTextField(
+//    modifier: Modifier = Modifier,
+//    state: TextFieldState,
+//    onClick: (String) -> Unit,
+//) {
+//    AppReadonlyTextField(
+//        modifier = modifier,
+//        state = state,
+//        label = stringResource(id = R.string.currency_label),
+//        placeholder = stringResource(id = R.string.select_currency_placeholder),
+//        trailingIcon = Icons.Default.ChevronRight,
+//        onClick = {
+//            onClick(state.value)
+//        }
+//    )
+//}
+//
+//@Composable
+//fun BalanceTextField(
+//    modifier: Modifier = Modifier,
+//    state: TextFieldState,
+//    onHelpClick: () -> Unit,
+//    onImeAction: () -> Unit = {},
+//) {
+//    AppTextField(
+//        modifier = modifier,
+//        state = state,
+//        error = stringResource(id = R.string.invalid_number_error),
+//        label = {
+//            Text(stringResource(id = R.string.balance_label))
+//        },
+//        keyboardOptions = KeyboardOptions(
+//            keyboardType = KeyboardType.Number,
+//            imeAction = ImeAction.Next,
+//        ),
+//        keyboardActions = KeyboardActions(
+//            onNext = {
+//                onImeAction()
+//            }
+//        ),
+//        trailingIcon = {
+//            IconButton(onClick = onHelpClick) {
+//                Icon(
+//                    imageVector = Icons.Default.Help,
+//                    contentDescription = stringResource(id = R.string.start_balance_desc),
+//                )
+//            }
+//        }
+//    )
+//}
+//
+//@ExperimentalComposeUiApi
+//@Composable
+//fun PasswordTextField(
+//    modifier: Modifier = Modifier,
+//    state: PasswordFieldState,
+//    onImeAction: () -> Unit = {},
+//) {
+//    AppProtectedTextField(
+//        modifier = modifier,
+//        state = state,
+//        error = stringResource(id = R.string.invalid_password_error),
+//        label = {
+//            Text(stringResource(id = R.string.password_label))
+//        },
+//        keyboardActions = KeyboardActions(
+//            onNext = {
+//                onImeAction()
+//            }
+//        ),
+//    )
+//}
+//
+//@ExperimentalComposeUiApi
+//@Composable
+//fun ConfirmPasswordTextField(
+//    modifier: Modifier = Modifier,
+//    state: ConfirmPasswordFieldState,
+//    onImeAction: () -> Unit = {},
+//) {
+//    AppProtectedTextField(
+//        modifier = modifier,
+//        state = state,
+//        error = stringResource(id = R.string.invalid_confirm_password_error),
+//        label = {
+//            Text(stringResource(id = R.string.confirm_password_label))
+//        },
+//        imeAction = ImeAction.Next,
+//        keyboardActions = KeyboardActions(
+//            onNext = {
+//                onImeAction()
+//            }
+//        ),
+//    )
+//}
+
+//@Preview
+//@ExperimentalComposeUiApi
+//@ExperimentalAnimationApi
+//@ExperimentalPagerApi
+//@Composable
+//private fun SignUpScreenPreview() {
+//    DucketAndroidTheme {
+////        SignUpScreen(
+////            appState = AppState(
+////                scaffoldState = rememberScaffoldState(),
+////                navHostController = rememberAnimatedNavController(),
+////                resources = LocalContext.current.resources,
+////                coroutineScope = rememberCoroutineScope(),
+////            ),
+////            viewModel = hiltViewModel(),
+////        )
+////        SignUpContent(
+////            nameFieldState = NameFieldState(),
+////            emailFieldState = EmailFieldState(),
+////            currencyFieldState = CurrencyFieldState(),
+////            balanceFieldState = BalanceFieldState(),
+////            passwordFieldState = PasswordFieldState(),
+////            confirmPasswordFieldState = ConfirmPasswordFieldState(PasswordFieldState()),
+////            signUpButtonState = ButtonState(),
+////            showStartingBalanceHelpDialog = false,
+////            onSignUpClick = {},
+////            onSelectCurrencyFieldClick = {},
+////            onSignInLinkClick = {},
+////            onStartingBalanceHelpClick = {},
+////            onStartingBalanceHelpDialogDismiss = {},
+////        )
+//    }
+//}
 
 @Composable
 fun rememberSignUpScreenState(
@@ -497,11 +928,21 @@ fun rememberSignUpScreenState(
     currencyFieldState: CurrencyFieldState = rememberSaveable { CurrencyFieldState() },
     balanceFieldState: BalanceFieldState = rememberSaveable { BalanceFieldState() },
     passwordFieldState: PasswordFieldState = rememberSaveable { PasswordFieldState() },
-    confirmPasswordFieldState: ConfirmPasswordFieldState = rememberSaveable { ConfirmPasswordFieldState(passwordFieldState) },
+    confirmPasswordFieldState: ConfirmPasswordFieldState = rememberSaveable {
+        ConfirmPasswordFieldState(
+            passwordFieldState
+        )
+    },
     signUpButtonState: ButtonState = rememberSaveable { ButtonState() },
-) = remember(nameFieldState, emailFieldState, passwordFieldState, confirmPasswordFieldState, signUpButtonState) {
+) = remember(
+    nameFieldState,
+    emailFieldState,
+    passwordFieldState,
+    confirmPasswordFieldState,
+    signUpButtonState
+) {
     SignUpScreenState(
-        nameFieldState= nameFieldState,
+        nameFieldState = nameFieldState,
         emailFieldState = emailFieldState,
         currencyFieldState = currencyFieldState,
         balanceFieldState = balanceFieldState,
@@ -567,29 +1008,4 @@ fun SegmentedProgressIndicator(
             easing = LinearEasing
         ),
     )
-}
-
-@Composable
-private fun PreviousStepButton(
-    modifier: Modifier = Modifier,
-    state: ButtonState,
-    onClick: () -> Unit,
-) {
-    Button(
-        modifier = modifier
-            .height(56.dp)
-            .clickable { !state.clickable },
-        enabled = state.enabled,
-        onClick = { onClick() },
-        colors = ButtonDefaults.appSecondaryButtonColors(),
-        shape = RoundedCornerShape(8.dp),
-        elevation = ButtonDefaults.appButtonElevation(),
-    ) {
-        IconButton(onClick = onClick) {
-            Icon(
-                imageVector = Icons.Default.ArrowBack,
-                contentDescription = Icons.Default.ArrowBack.name,
-            )
-        }
-    }
 }
