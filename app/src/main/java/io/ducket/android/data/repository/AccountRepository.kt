@@ -23,20 +23,35 @@ class AccountRepository @Inject constructor(
     private val datastore: AppDataStore,
 ) : IAccountRepository {
 
-    override fun getAccount(id: Long): Flow<ResourceState<AccountDetails?>> {
-        TODO("Not yet implemented")
+    override fun getAccount(id: Long): Flow<ResourceState<AccountDetails?>> = flow {
+        val user = datastore.getUser()
+
+        networkBoundResourceChannel(
+            remoteCall = {
+                api.getAccount(token = user.token, accountId = id)
+            },
+            isLocalDataStale = {
+                true
+            },
+            saveRemoteResult = { dto ->
+                db.withTransaction {
+                    db.insertRemoteAccount(dto)
+                }
+            },
+            localQuery = {
+                db.accountDao().selectAccount(id)
+            },
+        ).also { emitAll(it) }
     }
 
-    @ExperimentalCoroutinesApi
     override fun getAccounts(): Flow<ResourceState<List<AccountDetails>>> = flow {
-        val userPrefs = datastore.getUserPreferences().first()
+        val user = datastore.getUser()
 
         val resourceStateFlow = networkBoundResourceChannel(
             remoteCall = {
-                delay(1500)
-                api.getAccounts(token = userPrefs.token)
+                api.getAccounts(token = user.token)
             },
-            isLocalDataStale = { accountEntities ->
+            isLocalDataStale = {
                 true
             },
             saveRemoteResult = { dto ->

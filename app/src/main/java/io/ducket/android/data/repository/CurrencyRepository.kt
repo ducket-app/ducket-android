@@ -3,9 +3,8 @@ package io.ducket.android.data.repository
 import androidx.room.withTransaction
 import io.ducket.android.common.ResourceState
 import io.ducket.android.common.networkBoundResourceChannel
-import io.ducket.android.data.local.AppDataStore
 import io.ducket.android.data.local.LocalDataSource
-import io.ducket.android.data.local.entity.Currency
+import io.ducket.android.data.local.entity.CurrencyEntity
 import io.ducket.android.data.remote.RemoteDataSource
 import io.ducket.android.domain.repository.ICurrencyRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,7 +17,7 @@ class CurrencyRepository @Inject constructor(
 ) : ICurrencyRepository {
 
     @ExperimentalCoroutinesApi
-    override fun getCurrencies(): Flow<ResourceState<List<Currency>>> = networkBoundResourceChannel(
+    override fun getCurrencies(): Flow<ResourceState<List<CurrencyEntity>>> = networkBoundResourceChannel(
         remoteCall = { api.getCurrencies() },
         localQuery = {
             db.currencyDao().selectCurrencies()
@@ -32,7 +31,7 @@ class CurrencyRepository @Inject constructor(
     )
 
     @ExperimentalCoroutinesApi
-    override fun searchCurrencies(query: String): Flow<ResourceState<List<Currency>>> = networkBoundResourceChannel(
+    override fun searchCurrencies(query: String): Flow<ResourceState<List<CurrencyEntity>>> = networkBoundResourceChannel(
         remoteCall = { api.getCurrencies() },
         localQuery = {
             db.currencyDao().searchCurrency(query = query)

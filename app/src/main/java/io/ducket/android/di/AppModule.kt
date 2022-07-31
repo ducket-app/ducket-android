@@ -2,6 +2,7 @@ package io.ducket.android.di
 
 import android.content.Context
 import androidx.room.Room
+import com.google.gson.GsonBuilder
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -22,6 +23,7 @@ import javax.inject.Singleton
 import okhttp3.OkHttpClient
 
 import okhttp3.Interceptor
+import java.text.DateFormat
 
 
 @Module

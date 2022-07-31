@@ -19,9 +19,11 @@ import io.ducket.android.presentation.ui.theme.SpaceSmall
 fun AppBar(
     title: String = "",
     elevation: Dp = 2.dp,
+    actionButtons: @Composable RowScope.() -> Unit = {},
     navigationButton: @Composable (() -> Unit)? = null,
 ) {
     TopAppBar(
+        modifier = Modifier.height(56.dp),
         title = {
             Text(
                 text = title,
@@ -32,7 +34,8 @@ fun AppBar(
         },
         backgroundColor = MaterialTheme.colors.surface,
         elevation = elevation,
-        navigationIcon = navigationButton
+        navigationIcon = navigationButton,
+        actions = actionButtons,
     )
 }
 

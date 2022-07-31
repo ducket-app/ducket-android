@@ -3,8 +3,6 @@ package io.ducket.android.presentation.screens.auth.sign_in
 import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -17,10 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.focus.FocusManager
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -36,42 +31,20 @@ import androidx.navigation.NavController
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.navigation.navigate
 import io.ducket.android.R
+import io.ducket.android.common.extensions.clearFocusOnTapOutside
 import io.ducket.android.presentation.components.*
 import io.ducket.android.presentation.navigation.AppSnackbarManager
 import io.ducket.android.presentation.navigation.AuthNavGraph
 import io.ducket.android.presentation.navigation.OnLifecycleEvent
 import io.ducket.android.presentation.screens.InputFieldState
+import io.ducket.android.presentation.screens.NavGraphs
 import io.ducket.android.presentation.screens.ProtectedInputFieldState
-import io.ducket.android.presentation.screens.destinations.SignUpScreenDestination
+import io.ducket.android.presentation.screens.destinations.GetStartedScreenDestination
+import io.ducket.android.presentation.screens.destinations.HomeScreen2Destination
 import io.ducket.android.presentation.screens.destinations.WelcomeScreenDestination
 import io.ducket.android.presentation.ui.theme.DucketAndroidTheme
 import io.ducket.android.presentation.ui.theme.SpaceMedium
-import io.ducket.android.presentation.ui.theme.SpaceSmall
 import io.ducket.android.presentation.ui.theme.caption
-
-sealed class SignInScreenEvent {
-    data class OnEmailChange(val value: String) : SignInScreenEvent()
-    data class OnPasswordChange(val value: String) : SignInScreenEvent()
-    data class OnPasswordVisibilityChange(val visible: Boolean) : SignInScreenEvent()
-    object OnSignInClick : SignInScreenEvent()
-    object OnSignUpClick : SignInScreenEvent()
-    object OnCloseClick : SignInScreenEvent()
-}
-
-fun Modifier.clearFocusOnTapOutside(focusManager: FocusManager): Modifier = pointerInput(Unit) {
-    detectTapGestures(onTap = {
-        focusManager.clearFocus()
-    })
-}
-
-inline fun Modifier.noRippleClickable(crossinline onClick: () -> Unit): Modifier = composed {
-    clickable(
-        indication = null,
-        interactionSource = remember { MutableInteractionSource() }
-    ) {
-        onClick()
-    }
-}
 
 @AuthNavGraph
 @Destination
@@ -92,10 +65,12 @@ fun SignInScreen(
                     snackbarManager.showMessage(it.text)
                 }
                 is SignInUiEvent.NavigateToHome -> {
-                    // TODO
+                    navController.navigate(HomeScreen2Destination) {
+                        popUpTo(NavGraphs.root.route)
+                    }
                 }
                 is SignInUiEvent.NavigateToSignUp -> {
-                    navController.navigate(SignUpScreenDestination) {
+                    navController.navigate(GetStartedScreenDestination) {
                         popUpTo(WelcomeScreenDestination.route)
                     }
                 }
@@ -110,22 +85,22 @@ fun SignInScreen(
         state = uiState,
         scrollState = scrollState,
         onCloseClick = {
-            viewModel.onEvent(SignInScreenEvent.OnCloseClick)
+            viewModel.onEvent(SignInViewModel.Event.OnCloseClick)
         },
         onSignUpLinkClick = {
-            viewModel.onEvent(SignInScreenEvent.OnSignUpClick)
+            viewModel.onEvent(SignInViewModel.Event.OnSignUpClick)
         },
         onSignInClick = {
-            viewModel.onEvent(SignInScreenEvent.OnSignInClick)
+            viewModel.onEvent(SignInViewModel.Event.OnSignInClick)
         },
         onEmailChange = {
-            viewModel.onEvent(SignInScreenEvent.OnEmailChange(it))
+            viewModel.onEvent(SignInViewModel.Event.OnEmailChange(it))
         },
         onPasswordChange = {
-            viewModel.onEvent(SignInScreenEvent.OnPasswordChange(it))
+            viewModel.onEvent(SignInViewModel.Event.OnPasswordChange(it))
         },
         onPasswordVisibilityChange = {
-            viewModel.onEvent(SignInScreenEvent.OnPasswordVisibilityChange(it))
+            viewModel.onEvent(SignInViewModel.Event.OnPasswordVisibilityChange(it))
         }
     )
 }
@@ -249,7 +224,6 @@ fun SignInAppBar(onCloseClick: () -> Unit) {
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = Icons.Default.Close.name,
-                    modifier = Modifier.padding(horizontal = SpaceSmall)
                 )
             }
         }

@@ -3,30 +3,14 @@ package io.ducket.android.presentation.screens.auth.sign_in
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.ducket.android.common.ResourceState
-import io.ducket.android.data.remote.dto.UserAuthDto
+import io.ducket.android.data.remote.dto.user.UserAuth
 import io.ducket.android.domain.interactors.AuthUserInteractor
 import io.ducket.android.presentation.StateViewModel
 import io.ducket.android.presentation.components.validator.*
-import io.ducket.android.presentation.screens.InputFieldState
-import io.ducket.android.presentation.screens.ProtectedInputFieldState
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-
-sealed class SignInUiEvent {
-    class ShowMessage(val text: String) : SignInUiEvent()
-    object NavigateToSignUp : SignInUiEvent()
-    object NavigateToHome : SignInUiEvent()
-    object NavigateBack : SignInUiEvent()
-}
-
-data class SignInUiState(
-    val isLoading: Boolean = false,
-    val isFormValid: Boolean = false,
-    val email: InputFieldState = InputFieldState(),
-    val password: ProtectedInputFieldState = ProtectedInputFieldState(),
-)
 
 @HiltViewModel
 class SignInViewModel @Inject constructor(
@@ -73,9 +57,9 @@ class SignInViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
-    fun onEvent(event: SignInScreenEvent) {
+    fun onEvent(event: Event) {
         when (event) {
-            is SignInScreenEvent.OnEmailChange -> {
+            is Event.OnEmailChange -> {
                 updateState {
                     copy(email = email.copy(
                         error = validateEmail(event.value).message,
@@ -83,7 +67,7 @@ class SignInViewModel @Inject constructor(
                     ))
                 }
             }
-            is SignInScreenEvent.OnPasswordChange -> {
+            is Event.OnPasswordChange -> {
                 updateState {
                     copy(password = password.copy(
                         error = validatePassword(event.value).message,
@@ -91,12 +75,12 @@ class SignInViewModel @Inject constructor(
                     ))
                 }
             }
-            is SignInScreenEvent.OnPasswordVisibilityChange -> {
+            is Event.OnPasswordVisibilityChange -> {
                 updateState {
                     copy(password = password.copy(visible = event.visible))
                 }
             }
-            is SignInScreenEvent.OnSignInClick -> {
+            is Event.OnSignInClick -> {
                 if (state.isFormValid) {
                     signIn(
                         email = state.email.text,
@@ -104,12 +88,12 @@ class SignInViewModel @Inject constructor(
                     )
                 }
             }
-            is SignInScreenEvent.OnSignUpClick -> {
+            is Event.OnSignUpClick -> {
                 viewModelScope.launch {
                     _uiEvent.send(SignInUiEvent.NavigateToSignUp)
                 }
             }
-            is SignInScreenEvent.OnCloseClick -> {
+            is Event.OnCloseClick -> {
                 viewModelScope.launch {
                     _uiEvent.send(SignInUiEvent.NavigateBack)
                 }
@@ -119,7 +103,7 @@ class SignInViewModel @Inject constructor(
 
     private fun signIn(email: String, password: String) {
         viewModelScope.launch {
-            authUserInteractor(UserAuthDto(email, password)).collect {
+            authUserInteractor(UserAuth(email, password)).collect {
                 when (it) {
                     is ResourceState.Loading -> {
                         updateState {
@@ -149,7 +133,16 @@ class SignInViewModel @Inject constructor(
         return validateEmail(email).isValid && validatePassword(password).isValid
     }
 
-    private fun validateEmail(value: String): ValidationResult = EmailTextValidator.validate(value)
+    private fun validateEmail(value: String): ValidationResult = EmailValidator.validate(value)
 
-    private fun validatePassword(value: String): ValidationResult = PasswordTextValidator.validate(value)
+    private fun validatePassword(value: String): ValidationResult = PasswordValidator.validate(value)
+    
+    sealed class Event {
+        data class OnEmailChange(val value: String) : Event()
+        data class OnPasswordChange(val value: String) : Event()
+        data class OnPasswordVisibilityChange(val visible: Boolean) : Event()
+        object OnSignInClick : Event()
+        object OnSignUpClick : Event()
+        object OnCloseClick : Event()
+    }
 }

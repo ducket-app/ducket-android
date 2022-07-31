@@ -1,18 +1,13 @@
 package io.ducket.android.common
 
 import com.google.gson.Gson
-import io.ducket.android.data.local.entity.detailed.UserDetails
-import io.ducket.android.data.remote.dto.ErrorDto
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import io.ducket.android.data.remote.dto.ErrorResponse
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import retrofit2.Response
-import timber.log.Timber
 import java.io.IOException
-import java.lang.IllegalStateException
 
-@ExperimentalCoroutinesApi
 inline fun <LocalType, RemoteType> networkBoundResourceChannel(
     crossinline remoteCall: suspend () -> RemoteType,
     crossinline isLocalDataStale: (LocalType) -> Boolean = { true },
@@ -31,8 +26,9 @@ inline fun <LocalType, RemoteType> networkBoundResourceChannel(
         try {
             val remoteResult = remoteCall()
 
-            if (remoteResult is Response<*> && !remoteResult.isSuccessful)
+            if (remoteResult is Response<*> && !remoteResult.isSuccessful){
                 throw HttpException(remoteResult)
+            }
 
             saveRemoteResult(remoteResult)
             onSuccess()
@@ -42,7 +38,8 @@ inline fun <LocalType, RemoteType> networkBoundResourceChannel(
         } catch (e: Throwable) {
             val errState = when (e) {
                 is HttpException -> {
-                    Gson().fromJson(e.response()?.errorBody()?.charStream(), ErrorDto::class.java)?.message?.let { msg ->
+                    println(e.message)
+                    Gson().fromJson(e.response()?.errorBody()?.charStream(), ErrorResponse::class.java)?.message?.let { msg ->
                         if (e.response()?.code() in 400..499) {
                             ResourceState.AuthorizationError<LocalType>(data = localData, msg = msg)
                         } else {
@@ -54,6 +51,7 @@ inline fun <LocalType, RemoteType> networkBoundResourceChannel(
                     ResourceState.ConnectivityError<LocalType>(data = localData)
                 }
                 else -> {
+                    println(e.message)
                     ResourceState.Error<LocalType>(data = localData)
                 }
             }
@@ -66,49 +64,3 @@ inline fun <LocalType, RemoteType> networkBoundResourceChannel(
         localQuery().collect { send(ResourceState.Success(it)) }
     }
 }
-
-//inline fun <LocalType, RemoteType> networkBoundResource(
-//    crossinline remoteCall: suspend () -> RemoteType,
-//    crossinline isLocalDataStale: (LocalType) -> Boolean = { true },
-//    crossinline saveRemoteData: suspend (RemoteType) -> Unit,
-//    crossinline localQuery: () -> Flow<LocalType>,
-//) = flow {
-//    val localData = localQuery().first()
-//
-//    val resourceStateFlow = if (isLocalDataStale(localData) || localData == null) {
-//        emit(ResourceState.Loading())
-//
-//        try {
-//            val remoteRes = remoteCall()
-//            if (remoteRes is Response<*> && !remoteRes.isSuccessful)
-//                throw HttpException(remoteRes)
-//
-//            saveRemoteData(remoteRes)
-//            localQuery().map { ResourceState.Success(it) }
-//        } catch (e: Throwable) {
-//            Timber.e(e)
-//
-//            when (e) {
-//                is HttpException -> {
-//                    Gson().fromJson(e.response()?.errorBody()?.charStream(), ErrorDto::class.java)?.message?.let { msg ->
-//                        if (e.response()?.code() in 400..499) {
-//                            localQuery().map { ResourceState.AuthorizationError<LocalType>(msg = msg) }
-//                        } else {
-//                            localQuery().map { ResourceState.Error<LocalType>(data = localData, msg = msg) }
-//                        }
-//                    } ?: localQuery().map { ResourceState.Error<LocalType>(data = localData) }
-//                }
-//                is IOException -> {
-//                    localQuery().map { ResourceState.ConnectivityError<LocalType>() }
-//                }
-//                else -> {
-//                    localQuery().map { ResourceState.Error<LocalType>() }
-//                }
-//            }
-//        }
-//    } else {
-//        localQuery().map { ResourceState.Success(it) }
-//    }
-//
-//    emitAll(resourceStateFlow)
-//}

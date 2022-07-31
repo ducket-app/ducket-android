@@ -7,10 +7,10 @@ import io.ducket.android.data.local.AppDataStore
 import io.ducket.android.data.local.LocalDataSource
 import io.ducket.android.data.local.entity.detailed.UserDetails
 import io.ducket.android.data.remote.RemoteDataSource
-import io.ducket.android.data.remote.dto.*
+import io.ducket.android.data.remote.dto.user.UserAuth
+import io.ducket.android.data.remote.dto.user.UserCreate
 import io.ducket.android.domain.repository.IUserRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import javax.inject.Inject
 
@@ -21,9 +21,8 @@ class UserRepository @Inject constructor(
 ) : IUserRepository {
 
     @ExperimentalCoroutinesApi
-    override fun createUser(payload: UserCreateDto): Flow<ResourceState<UserDetails?>> = networkBoundResourceChannel(
+    override fun createUser(payload: UserCreate): Flow<ResourceState<UserDetails?>> = networkBoundResourceChannel(
         remoteCall = {
-            delay(500)
             api.createUser(payload)
         },
         saveRemoteResult = { res ->
@@ -31,7 +30,7 @@ class UserRepository @Inject constructor(
             db.withTransaction {
                 db.insertRemoteUser(dto)
             }
-            datastore.persistUserPreferences(dto.id, res.headers()["Authorization"]!!)
+            datastore.persistUser(dto.id, res.headers()["Authorization"]!!)
         },
         localQuery = {
             db.userDao().selectUser(payload.email)
@@ -39,7 +38,7 @@ class UserRepository @Inject constructor(
     )
 
     @ExperimentalCoroutinesApi
-    override fun authUser(payload: UserAuthDto): Flow<ResourceState<UserDetails?>> = networkBoundResourceChannel(
+    override fun authUser(payload: UserAuth): Flow<ResourceState<UserDetails?>> = networkBoundResourceChannel(
         remoteCall = {
             api.authUser(payload)
         },
@@ -48,7 +47,7 @@ class UserRepository @Inject constructor(
             db.withTransaction {
                 db.insertRemoteUser(dto)
             }
-            datastore.persistUserPreferences(dto.id, res.headers()["Authorization"]!!)
+            datastore.persistUser(dto.id, res.headers()["Authorization"]!!)
         },
         localQuery = {
             db.userDao().selectUser(payload.email)

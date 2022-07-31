@@ -7,17 +7,16 @@ import io.ducket.android.data.local.dao.AccountDao
 import io.ducket.android.data.local.dao.CategoryDao
 import io.ducket.android.data.local.dao.CurrencyDao
 import io.ducket.android.data.local.dao.UserDao
-import io.ducket.android.data.local.entity.Account
-import io.ducket.android.data.local.entity.Category
-import io.ducket.android.data.local.entity.Currency
-import io.ducket.android.data.local.entity.User
-import io.ducket.android.data.remote.dto.AccountDto
-import io.ducket.android.data.remote.dto.CurrencyDto
-import io.ducket.android.data.remote.dto.UserDto
-import io.ducket.android.data.remote.dto.toEntity
+import io.ducket.android.data.local.entity.AccountEntity
+import io.ducket.android.data.local.entity.CategoryEntity
+import io.ducket.android.data.local.entity.CurrencyEntity
+import io.ducket.android.data.local.entity.UserEntity
+import io.ducket.android.data.remote.dto.CurrencyResponse
+import io.ducket.android.data.remote.dto.user.UserResponse
+import io.ducket.android.data.remote.dto.account.AccountResponse
 
 @Database(
-    entities = [User::class, Currency::class, Account::class, Category::class],
+    entities = [UserEntity::class, CurrencyEntity::class, AccountEntity::class, CategoryEntity::class],
     version = 1,
 )
 @TypeConverters(Converters::class)
@@ -31,30 +30,24 @@ abstract class LocalDataSource : RoomDatabase() {
 
     abstract fun categoryDao(): CategoryDao
 
-    suspend fun insertRemoteUser(userDto: UserDto) {
-        insertRemoteCurrency(userDto.mainCurrency)
+    suspend fun insertRemoteUser(userDto: UserResponse) {
+        currencyDao().insertCurrency(userDto.currency.toEntity())
         userDao().insertUser(userDto.toEntity())
     }
 
-    suspend fun insertRemoteCurrency(currencyDto: CurrencyDto) {
+    suspend fun insertRemoteCurrency(currencyDto: CurrencyResponse) {
         currencyDao().insertCurrency(currencyDto.toEntity())
     }
 
-    suspend fun insertRemoteCurrencies(currenciesDto: List<CurrencyDto>) {
+    suspend fun insertRemoteCurrencies(currenciesDto: List<CurrencyResponse>) {
         currencyDao().insertCurrencies(currenciesDto.map { it.toEntity() })
     }
 
-    suspend fun insertRemoteAccount(vararg accountDto: AccountDto) {
-        accountDto.distinctBy { it.owner.id }.forEach {
-            insertRemoteUser(it.owner)
+    suspend fun insertRemoteAccount(vararg accountResponse: AccountResponse) {
+        accountResponse.distinctBy { it.currency.id }.forEach {
+            insertRemoteCurrency(it.currency)
         }
 
-        accountDto.distinctBy { it.accountCurrency.id }.forEach {
-            insertRemoteCurrency(it.accountCurrency)
-        }
-
-        accountDao().insertAccounts(
-            *accountDto.map { it.toEntity() }.toTypedArray()
-        )
+        accountDao().insertAccounts(*accountResponse.map { it.toEntity() }.toTypedArray())
     }
 }

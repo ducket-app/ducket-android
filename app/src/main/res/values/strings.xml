@@ -2,24 +2,23 @@
     <string name="app_name">DucketAndroid</string>
 
     <!--Captions-->
-    <string name="signup_legal">By joining, I agree to the terms of use and privacy policy.</string>
-    <string name="signup_legal_terms">terms of use</string>
-    <string name="signup_legal_privacy">privacy policy</string>
+    <string name="legal">By checking, I agree to the terms of use and privacy policy.</string>
+    <string name="legal_terms">terms of use</string>
+    <string name="legal_privacy">privacy policy</string>
+    <string name="start_balance_title">Start balance</string>
+    <string name="start_balance_subtitle">Your amount of cash in %1$s</string>
     <string name="sign_in_heading">Welcome back!</string>
     <string name="sign_in_subheading">You\'ve been missed!</string>
     <string name="sign_in_helper">Don\'t have an account yet? Sign Up</string>
     <string name="sign_in_helper_link">Sign Up</string>
     <string name="sign_up_personal_step_title">General info</string>
-    <string name="sign_up_personal_step_subtitle">Fill the data bellow to continue</string>
+    <string name="get_started_subtitle">Fill the data bellow to continue</string>
     <string name="sign_up_helper">Already have an account? Sign In</string>
     <string name="sign_up_helper_link">Sign In</string>
     <string name="sign_up_password_step_title">Set a password</string>
     <string name="sign_up_password_step_subtitle">Set a password to continue</string>
-    <string name="sign_up_balance_step_title">Start balance</string>
-    <string name="sign_up_balance_step_subtitle">Your amount of cash in PLN</string>
-    <string name="start_balance_help_heading">Start balance</string>
-    <string name="start_balance_help_helper">The balance reflects your current amount of cash money in your settlement currency.
-        If set, it automatically creates an Account with initial balance. The balance can be adjusted at any time in future.</string>
+    <string name="start_balance_helper_title">Start balance</string>
+    <string name="start_balance_helper_message">If set, it automatically creates a default Cash Account with a start balance that reflects your current amount of funds in your settlement currency. The balance can be adjusted at any time in the future.</string>
 
     <!--Password Requirements-->
     <string name="password_requirement_length">At least 8 characters</string>
@@ -41,11 +40,13 @@
     <string name="shopping_lists_title">Shopping lists</string>
     <string name="sign_in_title">Sign In</string>
     <string name="sign_up_title">Sign up</string>
+    <string name="get_started_title">Get started!</string>
 
     <!--Labels-->
     <string name="name_label">Name</string>
     <string name="surname_label">Surname</string>
-    <string name="balance_label">Start balance</string>
+    <string name="account_name_label">Account name</string>
+    <string name="balance_label">Balance</string>
     <string name="email_label">Email address</string>
     <string name="password_label">Password</string>
     <string name="confirm_password_label">Confirm password</string>
@@ -74,6 +75,7 @@
     <string name="invalid_password_error">Minimum password length is 4</string>
     <string name="invalid_currency_error">Invalid currency</string>
     <string name="invalid_confirm_password_error">Passwords should match and be valid</string>
+    <string name="duplicate_email_error">Such an email already been taken!</string>
 
     <!--Placeholders-->
     <string name="select_currency_hint">Select a currency</string>
@@ -85,11 +87,13 @@
     <string name="start_balance_desc">Start balance</string>
 
     <!--Buttons-->
+    <string name="skip">SKIP</string>
     <string name="get_started_button">GET STARTED</string>
     <string name="login_button">LOGIN</string>
     <string name="sign_in_button">SIGN IN</string>
     <string name="sign_up_button">SIGN UP</string>
     <string name="continue_button">CONTINUE</string>
+    <string name="finish_button">FINISH</string>
     <string name="back_button">BACK</string>
     <string name="got_it_button">GOT IT</string>
 </resources>

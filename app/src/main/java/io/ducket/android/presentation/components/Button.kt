@@ -19,7 +19,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import io.ducket.android.presentation.states.ButtonState
 import io.ducket.android.presentation.ui.theme.DucketAndroidTheme
 import io.ducket.android.presentation.ui.theme.SpaceSmall
 
@@ -169,46 +168,6 @@ fun AppPrimaryButton(
 }
 
 @Composable
-fun AppPrimaryButton(
-    modifier: Modifier = Modifier,
-    text: String,
-    state: ButtonState,
-    onClick: () -> Unit,
-) {
-    AppButton(
-        modifier = modifier.height(56.dp),
-        text = text,
-        state = state,
-        colors = ButtonDefaults.buttonColors(
-            backgroundColor = MaterialTheme.colors.primary,
-            contentColor = MaterialTheme.colors.onPrimary,
-            disabledBackgroundColor = MaterialTheme.colors.onSurface
-                .copy(alpha = 0.1f)
-                .compositeOver(MaterialTheme.colors.surface),
-            disabledContentColor = MaterialTheme.colors.onPrimary
-                .copy(alpha = ContentAlpha.disabled),
-        ),
-        onClick = { onClick() }
-    )
-}
-
-@Composable
-fun SecondaryButton(
-    modifier: Modifier = Modifier,
-    text: String,
-    state: ButtonState,
-    onClick: () -> Unit,
-) {
-    AppButton(
-        modifier = modifier.height(56.dp),
-        text = text,
-        state = state,
-        colors = ButtonDefaults.appSecondaryButtonColors(),
-        onClick = { onClick() }
-    )
-}
-
-@Composable
 fun ButtonDefaults.appPrimaryButtonColors(): ButtonColors = buttonColors(
     backgroundColor = MaterialTheme.colors.primary,
     contentColor = MaterialTheme.colors.onPrimary,
@@ -235,38 +194,12 @@ fun ButtonDefaults.appButtonElevation(): ButtonElevation = elevation(
     disabledElevation = 0.dp,
 )
 
-@Composable
-private fun AppButton(
-    modifier: Modifier = Modifier,
-    text: String,
-    state: ButtonState,
-    colors: ButtonColors,
-    onClick: () -> Unit,
-) {
-    Button(
-        modifier = modifier.clickable { !state.clickable },
-        enabled = state.enabled,
-        onClick = { onClick() },
-        colors = colors,
-        shape = RoundedCornerShape(8.dp),
-        elevation = ButtonDefaults.appButtonElevation(),
-    ) {
-        Text(
-            text = text,
-            overflow = TextOverflow.Ellipsis,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-        )
-    }
-}
-
 @ExperimentalAnimationApi
 @Preview
 @Composable
 private fun PrimaryButtonPreview() {
     DucketAndroidTheme {
         AppPrimaryButton(
-            state = ButtonState(),
             text = "Primary",
             onClick = {},
         )
@@ -278,8 +211,7 @@ private fun PrimaryButtonPreview() {
 @Composable
 private fun SecondaryButtonPreview() {
     DucketAndroidTheme {
-        SecondaryButton(
-            state = ButtonState(),
+        AppSecondaryButton(
             text = "Secondary",
             onClick = {},
         )

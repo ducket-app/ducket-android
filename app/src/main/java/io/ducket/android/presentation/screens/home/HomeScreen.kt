@@ -22,11 +22,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import androidx.navigation.NavHostController
 import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.pager.rememberPagerState
 import com.ramcosta.composedestinations.annotation.Destination
-import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import io.ducket.android.R
 import io.ducket.android.data.local.entity.detailed.AccountDetails
 import io.ducket.android.presentation.components.AppBar
@@ -34,14 +32,10 @@ import io.ducket.android.presentation.navigation.AppSnackbarManager
 import io.ducket.android.presentation.navigation.BottomBarDestination
 import io.ducket.android.presentation.navigation.HomeNavGraph
 import io.ducket.android.presentation.navigation.navigateTab
-import io.ducket.android.presentation.screens.NavGraphs
-import io.ducket.android.presentation.screens.destinations.HomeScreen2Destination
-import io.ducket.android.presentation.screens.destinations.RecordDetailsDestination
 import io.ducket.android.presentation.screens.records.CardCaption
 import io.ducket.android.presentation.screens.records.CardIcon
 import io.ducket.android.presentation.screens.records.CardTitle
 import io.ducket.android.presentation.screens.records.Record
-import io.ducket.android.presentation.ui.theme.SpaceSmall
 import io.ducket.android.presentation.ui.theme.caption
 import kotlinx.coroutines.launch
 import java.text.DecimalFormat
@@ -487,7 +481,7 @@ fun AccountSummaryButton(
 fun AccountsBalanceCardHeader(
     accounts: List<AccountDetails>
 ) {
-    val balance = accounts.map { it.account.balance }.sumOf { it }
+    val balance = accounts.map { it.account.startBalance }.sumOf { it }
     val balanceFormat = DecimalFormat("#,##0.00")
 
     Row(

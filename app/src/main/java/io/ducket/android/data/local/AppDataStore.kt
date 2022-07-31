@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
 import java.io.IOException
 import java.lang.IllegalStateException
 import javax.inject.Inject
@@ -35,7 +36,7 @@ class AppDataStore @Inject constructor(
 
     private val dataStore = context.dataStore
 
-    suspend fun persistUserPreferences(id: Long, token: String) {
+    suspend fun persistUser(id: Long, token: String) {
         dataStore.edit {
             it[userIdKey] = id
             it[userTokenKey] = token
@@ -55,6 +56,16 @@ class AppDataStore @Inject constructor(
         }
     }
 
+    fun getUser(): UserPreferences {
+        return runBlocking {
+             dataStore.data.map {
+                val token = it[userTokenKey] ?: ""
+                val id = it[userIdKey] ?: -1
+                UserPreferences(id, token)
+            }.first()
+        }
+    }
+
     fun getUserPreferences(): Flow<UserPreferences> {
         return dataStore.data.map {
             val token = it[userTokenKey] ?: ""
@@ -62,15 +73,4 @@ class AppDataStore @Inject constructor(
             UserPreferences(id, token)
         }
     }
-
-//    val userPreferences: Flow<UserPreferences> = dataStore.data
-//        .catch { e ->
-//            if (e is IOException) emit(emptyPreferences())
-//            else throw e
-//        }
-//        .map {
-//            val token = it[userTokenKey]
-//            val id = it[userIdKey]
-//            return@map UserPreferences(id, token)
-//        }
 }

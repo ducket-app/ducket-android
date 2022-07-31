@@ -28,7 +28,7 @@ import io.ducket.android.presentation.components.AppPrimaryButton
 import io.ducket.android.presentation.components.AppSecondaryButton
 import io.ducket.android.presentation.navigation.AuthNavGraph
 import io.ducket.android.presentation.screens.destinations.SignInScreenDestination
-import io.ducket.android.presentation.screens.destinations.SignUpScreenDestination
+import io.ducket.android.presentation.screens.destinations.GetStartedScreenDestination
 import io.ducket.android.presentation.ui.theme.DucketAndroidTheme
 import io.ducket.android.presentation.ui.theme.SpaceMedium
 import io.ducket.android.presentation.ui.theme.SpaceSmall
@@ -77,7 +77,7 @@ fun WelcomeScreen(
             navigator.navigate(SignInScreenDestination)
         },
         onGetStartedClick = {
-            navigator.navigate(SignUpScreenDestination)
+            navigator.navigate(GetStartedScreenDestination)
         }
     )
 }

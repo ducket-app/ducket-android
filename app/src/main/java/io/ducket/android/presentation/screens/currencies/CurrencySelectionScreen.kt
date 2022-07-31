@@ -33,11 +33,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.result.ResultBackNavigator
 import io.ducket.android.R
-import io.ducket.android.data.local.entity.Currency
+import io.ducket.android.data.local.entity.CurrencyEntity
 import io.ducket.android.presentation.navigation.AppSnackbarManager
 import io.ducket.android.presentation.navigation.AuthNavGraph
 import io.ducket.android.presentation.navigation.FullScreenDialogTransitions
-import io.ducket.android.presentation.navigation.TabsNavGraph
 import io.ducket.android.presentation.ui.theme.DucketAndroidTheme
 import io.ducket.android.presentation.ui.theme.SpaceMedium
 import io.ducket.android.presentation.ui.theme.SpaceSmall
@@ -127,7 +126,7 @@ fun CurrencySelectionContent(
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun CurrencySelectionList(
-    currencyList: List<Currency>,
+    currencyList: List<CurrencyEntity>,
     selectedCurrency: String,
     onCurrencySelect: (Long) -> Unit,
 ) {

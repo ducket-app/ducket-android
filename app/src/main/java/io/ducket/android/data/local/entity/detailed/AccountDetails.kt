@@ -2,24 +2,24 @@ package io.ducket.android.data.local.entity.detailed
 
 import androidx.room.Embedded
 import androidx.room.Relation
-import io.ducket.android.data.local.entity.Account
-import io.ducket.android.data.local.entity.Currency
-import io.ducket.android.data.local.entity.User
+import io.ducket.android.data.local.entity.AccountEntity
+import io.ducket.android.data.local.entity.CurrencyEntity
+import io.ducket.android.data.local.entity.UserEntity
 
 data class AccountDetails(
     @Embedded
-    val account: Account,
+    val account: AccountEntity,
 
     @Relation(
         parentColumn = "currencyId",
         entityColumn = "id",
     )
-    val currency: Currency,
+    val currency: CurrencyEntity,
 
     @Relation(
-        parentColumn = "ownerId",
+        parentColumn = "userId",
         entityColumn = "id",
-        entity = User::class,
+        entity = UserEntity::class,
     )
-    val owner: UserDetails,
+    val user: UserDetails,
 )
